@@ -65,7 +65,7 @@ export function Avatar({ user, size = 32 }) {
         dominantBaseline="central"
         fontSize={fontSize}
         fontWeight="700"
-        fontFamily="'Outfit', system-ui, sans-serif"
+        fontFamily="'Inter', -apple-system, system-ui, sans-serif"
         fill="#ffffff"
         style={{ userSelect: "none", letterSpacing: "0.5px", textShadow: "0 1px 3px rgba(0,0,0,0.2)" }}
       >

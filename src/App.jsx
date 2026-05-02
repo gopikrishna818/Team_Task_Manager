@@ -44,8 +44,8 @@ function AuthScreen({ onAuth }) {
       <div className="auth-box">
         <div className="auth-logo">
           <div style={{ width: 52, height: 52, background: "linear-gradient(135deg,var(--accent),var(--accent2))", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", color: "#fff", boxShadow: "0 8px 24px var(--accent-glow)" }}><Layers size={28} color="#fff" /></div>
-          <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.5px" }}>TaskFlow</div>
-          <div style={{ fontSize: 13, color: "var(--t2)", marginTop: 4 }}>Collaborative task management</div>
+          <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.04em" }}>TaskFlow</div>
+          <div style={{ fontSize: 14, color: "var(--t2)", marginTop: 2, fontWeight: 400 }}>Collaborative task management</div>
         </div>
         <div className="auth-card">
           <div className="tab-group">
