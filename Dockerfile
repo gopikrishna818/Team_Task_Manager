@@ -1,4 +1,4 @@
-FROM node:18-alpine as build
+FROM node:18-alpine AS build
 
 WORKDIR /app
 
@@ -10,6 +10,10 @@ RUN npm ci
 
 # Copy source
 COPY . .
+
+# Build with production API URL from build arg
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 # Build
 RUN npm run build
