@@ -1,0 +1,9 @@
+railway:
+  - builder: dockerfile
+    context: ./server
+    config:
+      port: 8000
+  - builder: dockerfile
+    context: ./
+    config:
+      port: 3000
