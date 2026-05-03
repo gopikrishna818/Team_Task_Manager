@@ -4,7 +4,7 @@ import { Avatar, Modal, Field, Badge, ProgressBar, ErrorBox } from "./ui.jsx";
 import { 
   LayoutDashboard, Briefcase, CheckCircle2, Layers, Inbox, 
   ClipboardList, TrendingUp, Calendar, Zap, ShieldCheck, 
-  Lock, Globe, Users, Monitor, Columns, ArrowRight, Bell, Plus, Settings, AlertCircle
+  Lock, Globe, Users, Monitor, Columns, ArrowRight, Bell, Plus, Settings, AlertCircle, Clock, Trash2, UserPlus, ChevronRight
 } from "lucide-react";
 
 const today = () => new Date().toISOString().split("T")[0];
@@ -276,7 +276,357 @@ function Dashboard({ user }) {
   );
 }
 
-function Clock({ size }) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>; }
+// ── Task Modal ───────────────────────────────────────────────────────────────
+function TaskModal({ task, projectId, user, members, onSave, onClose }) {
+  const uId = user.id || user._id;
+  const isAdmin = members?.find((m) => m.userId === uId || m.userId?._id === uId)?.role === "Admin";
+  const [form, setForm] = useState(
+    task
+      ? { ...task }
+      : { title: "", description: "", assignedTo: user.id || user._id, priority: "Medium", status: "To Do", dueDate: "" }
+  );
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const save = async () => {
+    try {
+      setBusy(true);
+      if (task) {
+        await api.updateTask(user.id, projectId, task.id, form);
+      } else {
+        await api.createTask(user.id, projectId, form);
+      }
+      onSave();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={task ? "Update Assignment" : "New Assignment"} onClose={onClose}>
+      <div className="entrance">
+        <ErrorBox msg={err} />
+        <Field label="Task Heading">
+          <input className="input" value={form.title} onChange={set("title")} disabled={!isAdmin} placeholder="What needs to be done?" />
+        </Field>
+        <Field label="Detailed Brief">
+          <textarea className="input" style={{ minHeight: 100, resize: "vertical" }} value={form.description} onChange={set("description")} disabled={!isAdmin} placeholder="Add more context here..." />
+        </Field>
+        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <Field label="Status">
+            <select className="input" value={form.status} onChange={set("status")}>
+              {["To Do", "In Progress", "Done"].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Priority Level">
+            <select className="input" value={form.priority} onChange={set("priority")} disabled={!isAdmin}>
+              {["Low", "Medium", "High"].map((p) => (
+                <option key={p}>{p}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <Field label="Assign To Member">
+            <select className="input" value={form.assignedTo} onChange={set("assignedTo")} disabled={!isAdmin}>
+              {members?.map((m) => (
+                <option key={m.userId} value={m.userId}>
+                  {m.userName}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Deadline">
+            <input className="input" type="date" value={form.dueDate} onChange={set("dueDate")} disabled={!isAdmin} />
+          </Field>
+        </div>
+        <div className="flex gap12 mt-20" style={{ justifyContent: "flex-end", marginTop: 24 }}>
+          <button className="btn" onClick={onClose}>Discard</button>
+          <button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? "Processing..." : "Commit Changes"}</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Project Tasks ────────────────────────────────────────────────────────────
+function ProjectTasksView({ project, user, onBack }) {
+  const uId = user.id || user._id;
+  const isAdmin = project.members?.find((m) => m.userId === uId || m.userId?._id === uId)?.role === "Admin";
+  const [tasks, setTasks] = useState([]);
+  const [showNew, setShowNew] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [filter, setFilter] = useState("All");
+  const [showMembers, setShowMembers] = useState(false);
+  const [memEmail, setMemEmail] = useState("");
+  const [memErr, setMemErr] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await api.getTasks(user.id, project.id);
+      setTasks(data);
+    } catch (err) {
+      console.error("Failed to fetch tasks:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user.id, project.id]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const cols = ["To Do", "In Progress", "Done"];
+  const colColors = { "To Do": "var(--t3)", "In Progress": "var(--blue)", Done: "var(--green)" };
+  const filtered = filter === "All" ? tasks : tasks.filter((t) => t.status === filter);
+
+  const addMem = async () => {
+    try {
+      await api.addMember(user.id, project.id, memEmail, "Member");
+      setMemEmail("");
+      setMemErr("");
+    } catch (e) {
+      setMemErr(e.message);
+    }
+  };
+
+  const deleteTask = async (taskId) => {
+    if (!confirm("Delete this task?")) return;
+    try {
+      await api.deleteTask(user.id, project.id, taskId);
+      refresh();
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+    }
+  };
+
+  if (loading) return <div style={{ padding: 48 }}>Syncing tasks...</div>;
+
+  return (
+    <div className="fade-in">
+      <div className="flex justify-between mb-32">
+        <div className="flex gap12">
+          <button className="btn" onClick={onBack}><ArrowRight style={{ transform: 'rotate(180deg)' }} size={18} /></button>
+          <div>
+            <h2 style={{ fontSize: 24, fontWeight: 800 }}>{project.name}</h2>
+            <p className="text-mute">{project.description}</p>
+          </div>
+        </div>
+        <div className="flex gap12">
+          {isAdmin && <button className="btn" onClick={() => setShowMembers(true)}><Users size={18}/> Members</button>}
+          {isAdmin && <button className="btn btn-primary" onClick={() => { setEditing(null); setShowNew(true); }}><Plus size={18}/> Add Task</button>}
+        </div>
+      </div>
+
+      <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        {cols.map((col, idx) => (
+          <div key={col} className="tasks-card" style={{ background: '#fcfcfc' }}>
+            <div className="flex justify-between mb-20" style={{ borderBottom: `2px solid ${colColors[col]}`, paddingBottom: 12 }}>
+              <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: 13, letterSpacing: '0.05em' }}>{col}</span>
+              <span className="badge" style={{ background: '#eee', color: '#666' }}>{filtered.filter(t => t.status === col).length}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {filtered.filter(t => t.status === col).map(t => (
+                <div key={t.id} className="metric-card" style={{ padding: 16, cursor: 'pointer' }} onClick={() => { setEditing(t); setShowNew(true); }}>
+                  <div className="flex justify-between mb-8">
+                    <Badge type={t.priority} />
+                    {t.dueDate < today() && t.status !== "Done" && <span style={{ color: 'var(--red)', fontSize: 11, fontWeight: 700 }}>⚠ OVERDUE</span>}
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>{t.title}</div>
+                  <div className="flex justify-between">
+                    <Avatar user={{ name: t.assignedToName }} size={24} />
+                    <span style={{ fontSize: 11, color: '#999', fontWeight: 700 }}>{t.dueDate}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {showNew && <TaskModal task={editing} projectId={project.id} user={user} members={project.members} onSave={() => { refresh(); setShowNew(false); setEditing(null); }} onClose={() => { setShowNew(false); setEditing(null); }} />}
+      
+      {showMembers && isAdmin && (
+        <Modal title="Project Access" onClose={() => setShowMembers(false)}>
+           <div style={{ marginBottom: 24 }}>
+             {project.members?.map(m => (
+               <div key={m.userId} className="flex justify-between p-12 mb-8" style={{ background: '#f9f9f9', borderRadius: 12 }}>
+                 <div className="flex gap12">
+                   <Avatar user={{ name: m.userName, email: m.userEmail }} size={32} />
+                   <div>
+                     <div style={{ fontWeight: 700, fontSize: 14 }}>{m.userName}</div>
+                     <div style={{ fontSize: 12, color: '#999' }}>{m.role}</div>
+                   </div>
+                 </div>
+                 {m.userId !== user.id && <button className="btn" style={{ padding: '4px 8px', fontSize: 11 }} onClick={() => api.removeMember(user.id, project.id, m.userId)}>Remove</button>}
+               </div>
+             ))}
+           </div>
+           <div className="tasks-card" style={{ background: '#f4f4f4' }}>
+             <Field label="Invite teammate">
+               <div className="flex gap8">
+                 <input className="input" placeholder="email@company.com" value={memEmail} onChange={(e) => setMemEmail(e.target.value)} />
+                 <button className="btn btn-primary" onClick={addMem}>Invite</button>
+               </div>
+             </Field>
+             <ErrorBox msg={memErr} />
+           </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── Projects ─────────────────────────────────────────────────────────────────
+function ProjectsView({ user, onSelect }) {
+  const [projects, setProjects] = useState([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({ name: "", description: "" });
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await api.getProjects(user.id);
+      setProjects(data);
+    } catch (err) { console.error(err); } finally { setLoading(false); }
+  }, [user.id]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const create = async () => {
+    try {
+      await api.createProject(user.id, form);
+      setShowCreate(false);
+      setForm({ name: "", description: "" });
+      refresh();
+    } catch (e) { setErr(e.message); }
+  };
+
+  const del = async (e, id) => {
+    e.stopPropagation();
+    if (!confirm("Delete this workspace?")) return;
+    try {
+      await api.deleteProject(user.id, id);
+      refresh();
+    } catch (e) { alert(e.message); }
+  };
+
+  if (loading) return <div style={{ padding: 48 }}>Loading workspaces...</div>;
+
+  return (
+    <div className="fade-in">
+      <div className="flex justify-between mb-32">
+        <div>
+          <h2 style={{ fontSize: 28, fontWeight: 800 }}>Workspaces</h2>
+          <p className="text-mute">Manage and collaborate on your team projects</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={18}/> New Workspace</button>
+      </div>
+
+      <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
+        {projects.map((p, i) => (
+          <div key={p.id} className="metric-card" style={{ cursor: 'pointer' }} onClick={() => onSelect(p)}>
+            <div className="flex justify-between mb-16">
+              <Badge type={p.members?.find(m => m.userId === (user.id || user._id))?.role || "Member"} />
+              <button className="btn" style={{ border: 'none', background: 'none', padding: 0 }} onClick={(e) => del(e, p.id)}><Trash2 size={16} color="#ef4444" /></button>
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>{p.name}</h3>
+            <p className="text-mute" style={{ fontSize: 14, marginBottom: 20, minHeight: 40 }}>{p.description}</p>
+            <div className="flex justify-between" style={{ borderTop: '1px solid #f4f4f4', paddingTop: 16 }}>
+              <div className="flex -space-x-2">
+                {p.members?.slice(0, 3).map((m, idx) => (
+                  <div key={idx} style={{ marginLeft: idx > 0 ? -8 : 0, border: '2px solid #fff', borderRadius: '50%' }}>
+                    <Avatar user={{ name: m.userName }} size={28} />
+                  </div>
+                ))}
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#999' }}>{p.members?.length} Members</span>
+            </div>
+          </div>
+        ))}
+        {projects.length === 0 && <div className="tasks-card" style={{ gridColumn: '1/-1', textAlign: 'center', padding: 60 }}>No workspaces yet. Create your first one to get started!</div>}
+      </div>
+
+      {showCreate && (
+        <Modal title="Create Workspace" onClose={() => setShowCreate(false)}>
+           <div className="entrance">
+             <ErrorBox msg={err} />
+             <Field label="Workspace Name"><input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Product Launch" /></Field>
+             <Field label="Description"><textarea className="input" style={{ minHeight: 120 }} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="What is this project about?" /></Field>
+             <button className="btn btn-primary w-full mt-20" onClick={create}>Initialize Workspace</button>
+           </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── My Tasks ─────────────────────────────────────────────────────────────────
+function MyTasksView({ user }) {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        const data = await api.getTasks(user.id);
+        const uId = user.id || user._id;
+        setTasks(data.filter(t => t.assignedTo === uId));
+      } catch (err) { console.error(err); } finally { setLoading(false); }
+    };
+    fetchTasks();
+  }, [user.id]);
+
+  if (loading) return <div style={{ padding: 48 }}>Loading your tasks...</div>;
+
+  return (
+    <div className="fade-in">
+      <div className="flex justify-between mb-32">
+        <div>
+          <h2 style={{ fontSize: 28, fontWeight: 800 }}>My Tasks</h2>
+          <p className="text-mute">You have {tasks.length} active assignments</p>
+        </div>
+      </div>
+
+      <div className="tasks-card">
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Project</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Due</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.map(t => (
+              <tr key={t.id}>
+                <td><div className="task-name">{t.title}</div></td>
+                <td className="text-mute" style={{ fontSize: 14 }}>{t.projectName}</td>
+                <td><Badge type={t.priority} /></td>
+                <td><span style={{ fontSize: 13, fontWeight: 700, color: t.status === 'Done' ? '#10b981' : '#666' }}>{t.status}</span></td>
+                <td><span style={{ fontSize: 13, color: '#999', fontWeight: 600 }}>{t.dueDate}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {tasks.length === 0 && <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>No tasks assigned to you yet.</div>}
+      </div>
+    </div>
+  );
+}
 
 // ── App Shell ────────────────────────────────────────────────────────────────
 export default function App() {
@@ -317,10 +667,10 @@ export default function App() {
         
         <div className="sb-section">
           <div className="sb-label">Workspace</div>
-          <button className={`nav-btn ${view === 'dashboard' ? 'active' : ''}`} onClick={() => { setView('dashboard'); setProj(null); }}>
+          <button className={`nav-btn ${view === 'dashboard' && !proj ? 'active' : ''}`} onClick={() => { setView('dashboard'); setProj(null); }}>
             <div className="flex gap12"><LayoutDashboard size={20}/> Overview</div>
           </button>
-          <button className={`nav-btn ${view === 'projects' ? 'active' : ''}`} onClick={() => { setView('projects'); setProj(null); }}>
+          <button className={`nav-btn ${view === 'projects' || proj ? 'active' : ''}`} onClick={() => { setView('projects'); setProj(null); }}>
             <div className="flex gap12"><Briefcase size={20}/> Projects</div>
             <div className="badge" style={{ padding: '2px 8px', fontSize: 10, background: '#333', color: '#fff' }}>2</div>
           </button>
@@ -328,12 +678,16 @@ export default function App() {
             <div className="flex gap12"><CheckCircle2 size={20}/> My tasks</div>
             <div className="badge" style={{ padding: '2px 8px', fontSize: 10, background: '#333', color: '#fff' }}>3</div>
           </button>
-          <button className="nav-btn"><div className="flex gap12"><Users size={20}/> Members</div></button>
+          <button className={`nav-btn ${view === 'members' ? 'active' : ''}`} onClick={() => { setView('members'); setProj(null); }}>
+            <div className="flex gap12"><Users size={20}/> Members</div>
+          </button>
         </div>
 
         <div className="sb-section">
           <div className="sb-label">Settings</div>
-          <button className="nav-btn"><div className="flex gap12"><Settings size={20}/> Settings</div></button>
+          <button className={`nav-btn ${view === 'settings' ? 'active' : ''}`} onClick={() => { setView('settings'); setProj(null); }}>
+            <div className="flex gap12"><Settings size={20}/> Settings</div>
+          </button>
         </div>
 
         <div className="sb-user-card" style={{ marginTop: 'auto' }}>
@@ -348,16 +702,29 @@ export default function App() {
       </aside>
       
       <main className="main">
-        {proj ? (
-          <div className="content">
-             {/* Note: I'll assume ProjectTasksView is still needed but I'll skip detailed redesign for now to focus on Dashboard */}
-             <button onClick={() => setProj(null)}>← Back</button>
-          </div>
-        ) : view === "dashboard" ? (
-          <Dashboard user={user} />
-        ) : (
-          <div className="content">Other views under construction</div>
-        )}
+        <div className="content">
+          {proj ? (
+            <ProjectTasksView project={proj} user={user} onBack={() => setProj(null)} />
+          ) : view === "dashboard" ? (
+            <Dashboard user={user} />
+          ) : view === "projects" ? (
+            <ProjectsView user={user} onSelect={p => setProj(p)} />
+          ) : view === "queue" ? (
+            <MyTasksView user={user} />
+          ) : view === "members" ? (
+            <div className="fade-in">
+              <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>Members</h2>
+              <p className="text-mute mb-32">Manage your team and their permissions</p>
+              <div className="tasks-card">Team management coming soon...</div>
+            </div>
+          ) : (
+            <div className="fade-in">
+              <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>Settings</h2>
+              <p className="text-mute mb-32">Configure your account and workspace preferences</p>
+              <div className="tasks-card">Settings coming soon...</div>
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
