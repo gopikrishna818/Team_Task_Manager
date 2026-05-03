@@ -59,14 +59,14 @@ function AuthScreen({ onAuth }) {
   };
 
   return (
-    <div className="app flex items-center justify-center fade-in" style={{ background: 'var(--bg)' }}>
+    <div className="h-screen flex items-center justify-center fade-in" style={{ background: 'var(--bg)' }}>
       <div className="auth-box entrance" style={{ maxWidth: 420, width: '90%' }}>
-        <div className="auth-logo text-center mb-20" style={{ textAlign: 'center' }}>
-          <div className="logo-icon mb-12" style={{ margin: '0 auto 16px', width: 60, height: 60 }}>
-            <Layers size={32} color="#fff" />
+        <div className="auth-logo text-center mb-20">
+          <div className="logo-icon mb-12" style={{ margin: '0 auto 16px', width: 64, height: 64 }}>
+            <Layers size={36} color="#fff" />
           </div>
-          <h1 className="logo-text" style={{ fontSize: 32 }}>TaskFlow</h1>
-          <p className="text-mute">Enterprise Grade Productivity</p>
+          <h1 className="logo-text" style={{ fontSize: 40, fontWeight: 800, letterSpacing: '-0.04em' }}>Sign in to TaskFlow.</h1>
+          <p className="text-mute" style={{ fontSize: 16, marginTop: 8 }}>Use your enterprise account to continue.</p>
         </div>
         
         <div className="card glass p-32">
@@ -97,9 +97,6 @@ function AuthScreen({ onAuth }) {
           </button>
         </div>
         
-        <p className="text-center mt-20 text-mute" style={{ textAlign: 'center', marginTop: 24, fontSize: 13 }}>
-          © 2026 TaskFlow Inc. Built for top-tier teams.
-        </p>
       </div>
     </div>
   );
