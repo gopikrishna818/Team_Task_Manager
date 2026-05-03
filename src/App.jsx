@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { api, parseToken, genToken, getUser } from "./data.js";
 import { Avatar, Modal, Field, Badge, ProgressBar, ErrorBox } from "./ui.jsx";
-import { LayoutDashboard, Briefcase, CheckCircle2, Layers, Inbox, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Briefcase, CheckCircle2, Layers, Inbox, ClipboardList, TrendingUp, Calendar, Zap } from "lucide-react";
 
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -15,6 +15,25 @@ class ErrorBoundary extends React.Component {
     }
     return this.props.children; 
   }
+}
+
+// ── Components ───────────────────────────────────────────────────────────────
+
+function SimpleChart({ data, height = 120, color = "var(--blue)" }) {
+  const max = Math.max(...data.map(d => d.value), 1);
+  return (
+    <div className="chart-container" style={{ height }}>
+      {data.map((d, i) => (
+        <div key={i} className="chart-bar" style={{ 
+          height: `${(d.value / max) * 100}%`, 
+          backgroundColor: color,
+          opacity: 0.3 + (i / data.length) * 0.7
+        }}>
+          <div style={{ position: 'absolute', bottom: -20, left: '50%', transform: 'translateX(-50%)', fontSize: 10, color: 'var(--t3)' }}>{d.label}</div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ── Auth Screen ──────────────────────────────────────────────────────────────
@@ -40,22 +59,27 @@ function AuthScreen({ onAuth }) {
   };
 
   return (
-    <div className="auth-wrap">
-      <div className="auth-box">
-        <div className="auth-logo">
-          <div style={{ width: 52, height: 52, background: "linear-gradient(135deg,var(--accent),var(--accent2))", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", color: "#fff", boxShadow: "0 8px 24px var(--accent-glow)" }}><Layers size={28} color="#fff" /></div>
-          <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.04em" }}>TaskFlow</div>
-          <div style={{ fontSize: 14, color: "var(--t2)", marginTop: 2, fontWeight: 400 }}>Collaborative task management</div>
+    <div className="app flex items-center justify-center fade-in" style={{ background: 'var(--bg)' }}>
+      <div className="auth-box entrance" style={{ maxWidth: 420, width: '90%' }}>
+        <div className="auth-logo text-center mb-20" style={{ textAlign: 'center' }}>
+          <div className="logo-icon mb-12" style={{ margin: '0 auto 16px', width: 60, height: 60 }}>
+            <Layers size={32} color="#fff" />
+          </div>
+          <h1 className="logo-text" style={{ fontSize: 32 }}>TaskFlow</h1>
+          <p className="text-mute">Enterprise Grade Productivity</p>
         </div>
-        <div className="auth-card">
-          <div className="tab-group">
+        
+        <div className="card glass p-32">
+          <div className="tab-group flex mb-20" style={{ background: 'var(--accent-bg)', padding: 4, borderRadius: 'var(--r-md)' }}>
             {["login", "signup"].map((m) => (
-              <button key={m} className={`tab${mode === m ? " active" : ""}`} onClick={() => setMode(m)}>
+              <button key={m} className={`nav-btn flex-1 ${mode === m ? "active" : ""}`} onClick={() => setMode(m)} style={{ flex: 1, justifyContent: 'center' }}>
                 {m === "login" ? "Sign In" : "Sign Up"}
               </button>
             ))}
           </div>
+          
           <ErrorBox msg={err} />
+          
           {mode === "signup" && (
             <Field label="Full Name">
               <input className="input" placeholder="Jane Smith" value={form.name} onChange={set("name")} />
@@ -67,10 +91,15 @@ function AuthScreen({ onAuth }) {
           <Field label="Password">
             <input className="input" type="password" value={form.password} onChange={set("password")} onKeyDown={(e) => e.key === "Enter" && submit()} />
           </Field>
-          <button className="btn btn-primary btn-full" onClick={submit} disabled={busy} style={{ padding: ".65rem", marginTop: 4 }}>
-            {busy ? "Please wait…" : mode === "login" ? "Sign In →" : "Create Account →"}
+          
+          <button className="btn btn-primary btn-full w-full mt-12" onClick={submit} disabled={busy} style={{ width: '100%', padding: 14 }}>
+            {busy ? "Authenticating..." : mode === "login" ? "Sign In →" : "Join TaskFlow →"}
           </button>
         </div>
+        
+        <p className="text-center mt-20 text-mute" style={{ textAlign: 'center', marginTop: 24, fontSize: 13 }}>
+          © 2026 TaskFlow Inc. Built for top-tier teams.
+        </p>
       </div>
     </div>
   );
@@ -95,66 +124,97 @@ function Dashboard({ user }) {
     fetchDashboard();
   }, [user.id]);
 
-  if (loading || !d) return <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>;
+  if (loading || !d) return <div style={{ padding: "2rem", textAlign: "center" }} className="fade-in">Preparing your workspace...</div>;
 
-  const statusColors = { "To Do": "#a0a0b5", "In Progress": "#2563eb", Done: "#16a34a" };
+  const statusColors = { "To Do": "var(--t3)", "In Progress": "var(--blue)", Done: "var(--green)" };
+  
   const metrics = [
-    { label: "My Projects", value: d.projects, icon: <Briefcase size={80} strokeWidth={1} />, cls: "metric-1", bar: 100 },
-    { label: "Total Tasks", value: d.totalTasks, icon: <Layers size={80} strokeWidth={1} />, cls: "metric-2", bar: 100 },
-    { label: "My Tasks", value: d.myTasks, icon: <CheckCircle2 size={80} strokeWidth={1} />, cls: "metric-3", bar: d.totalTasks ? Math.round((d.myTasks / d.totalTasks) * 100) : 0 },
-    { label: "Overdue", value: d.overdue, icon: <LayoutDashboard size={80} strokeWidth={1} />, cls: "metric-4", bar: d.totalTasks ? Math.round((d.overdue / d.totalTasks) * 100) : 0 },
-    { label: "Completed", value: d.byStatus["Done"], icon: <CheckCircle2 size={80} strokeWidth={1} />, cls: "metric-5", bar: d.totalTasks ? Math.round((d.byStatus["Done"] / d.totalTasks) * 100) : 0 },
+    { label: "My Projects", value: d.projects, icon: <Briefcase size={80} />, cls: "metric-1" },
+    { label: "Total Tasks", value: d.totalTasks, icon: <Zap size={80} />, cls: "metric-2" },
+    { label: "Active Now", value: d.myTasks, icon: <TrendingUp size={80} />, cls: "metric-3" },
+    { label: "Urgent", value: d.overdue, icon: <Calendar size={80} />, cls: "metric-4" },
+    { label: "Completed", value: d.byStatus["Done"], icon: <CheckCircle2 size={80} />, cls: "metric-5" },
+  ];
+
+  const chartData = [
+    { label: "Mon", value: 12 }, { label: "Tue", value: 18 }, { label: "Wed", value: 15 },
+    { label: "Thu", value: 25 }, { label: "Fri", value: 22 }, { label: "Sat", value: 8 }, { label: "Sun", value: 10 }
   ];
 
   return (
-    <div className="fade-up">
-      <div className="section-head">
+    <div className="slide-up">
+      <div className="section-head mb-20">
         <div>
-          <div className="section-title">Dashboard</div>
-          <div className="section-sub">Welcome back, {user.name.split(" ")[0]} 👋</div>
+          <h1 className="section-title" style={{ fontSize: 34, fontWeight: 800 }}>Overview</h1>
+          <p className="section-sub">Welcome back, {user.name.split(" ")[0]}! Here's what's happening.</p>
+        </div>
+        <div className="flex gap12">
+          <button className="btn"><Calendar size={16}/> Schedule</button>
+          <button className="btn btn-primary"><Zap size={16}/> Quick Action</button>
         </div>
       </div>
+
       <div className="bento bento-5col mb-20">
-        {metrics.map((m) => (
-          <div key={m.label} className={`metric ${m.cls}`}>
+        {metrics.map((m, i) => (
+          <div key={m.label} className={`metric entrance ${m.cls}`} style={{ animationDelay: `${i * 0.1}s` }}>
             <div className="metric-icon">{m.icon}</div>
             <div className="metric-label">{m.label}</div>
             <div className="metric-value">{m.value}</div>
-            <div className="metric-bar">
-              <div className="metric-bar-fill" style={{ width: `${m.bar}%` }} />
+            <div className="metric-bar" style={{ background: 'rgba(255,255,255,0.2)' }}>
+              <div className="metric-bar-fill" style={{ width: '70%', background: '#fff' }} />
             </div>
           </div>
         ))}
       </div>
+
       <div className="bento bento-3col">
-        <div className="card">
-          <div className="fw6 mb-12" style={{ fontSize: 14 }}>Tasks by Status</div>
-          <div className="bar-row">
+        <div className="card glass entrance" style={{ animationDelay: '0.5s', gridColumn: 'span 2' }}>
+          <div className="flex justify-between mb-20" style={{ justifyContent: 'space-between' }}>
+            <div>
+              <div className="fw-bold" style={{ fontSize: 18 }}>Activity Trends</div>
+              <div className="text-mute fs13">Tasks completed this week</div>
+            </div>
+            <Badge type="Weekly" />
+          </div>
+          <SimpleChart data={chartData} height={180} />
+        </div>
+
+        <div className="card entrance" style={{ animationDelay: '0.6s' }}>
+          <div className="fw-bold mb-12" style={{ fontSize: 16 }}>Status Allocation</div>
+          <div className="bar-row" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {Object.entries(d.byStatus).map(([k, v]) => (
               <div key={k} className="bar-item">
-                <div className="bar-meta">
-                  <span>{k}</span>
-                  <span>{v}</span>
+                <div className="bar-meta flex justify-between mb-6" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span className="fs13 fw-bold">{k}</span>
+                  <span className="fs13 text-mute">{v} tasks</span>
                 </div>
-                <div className="bar-track">
-                  <div className="bar-fill" style={{ width: `${d.totalTasks ? (v / d.totalTasks) * 100 : 0}%`, background: statusColors[k] }} />
+                <div className="bar-track" style={{ height: 6, background: 'var(--accent-bg)', borderRadius: 3 }}>
+                  <div className="bar-fill" style={{ 
+                    width: `${d.totalTasks ? (v / d.totalTasks) * 100 : 0}%`, 
+                    background: statusColors[k] || 'var(--accent)',
+                    height: '100%',
+                    borderRadius: 3
+                  }} />
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div className="card">
-          <div className="fw6 mb-12" style={{ fontSize: 14 }}>Workload by Member</div>
+      </div>
+
+      <div className="bento bento-2col mt-20" style={{ marginTop: 24 }}>
+        <div className="card entrance" style={{ animationDelay: '0.7s' }}>
+          <div className="fw-bold mb-20" style={{ fontSize: 16 }}>Team Workload</div>
           {d.byUser.length === 0 ? (
-            <div className="tc-2 fs13">No assignments yet</div>
+            <div className="empty text-mute">No assignments yet</div>
           ) : (
             d.byUser.map(({ user: u, count }) => (
-              <div key={u.id} className="flex gap8 mb-12">
-                <Avatar user={u} size={26} />
+              <div key={u.id} className="flex gap12 mb-12 p-12" style={{ background: 'var(--bg-sidebar)', borderRadius: 'var(--r-md)' }}>
+                <Avatar user={u} size={36} />
                 <div style={{ flex: 1 }}>
-                  <div className="flex gap6 mb-6">
-                    <span className="fs13 fw6">{u.name.split(" ")[0]}</span>
-                    <span className="fs12 tc-2 ml-auto">{count} tasks</span>
+                  <div className="flex justify-between mb-6" style={{ justifyContent: 'space-between' }}>
+                    <span className="fs14 fw-bold">{u.name}</span>
+                    <span className="fs12 text-mute">{count} Active</span>
                   </div>
                   <ProgressBar value={d.totalTasks ? Math.round((count / d.totalTasks) * 100) : 0} />
                 </div>
@@ -162,17 +222,21 @@ function Dashboard({ user }) {
             ))
           )}
         </div>
-        <div className="card">
-          <div className="fw6 mb-12" style={{ fontSize: 14 }}>Recent Activity</div>
-          {d.recentTasks.map((t) => (
-            <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-              <div>
-                <div className="fs13 fw6" style={{ marginBottom: 3 }}>{t.title}</div>
+        
+        <div className="card entrance" style={{ animationDelay: '0.8s' }}>
+          <div className="fw-bold mb-20" style={{ fontSize: 16 }}>Live Feed</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {d.recentTasks.map((t) => (
+              <div key={t.id} className="flex gap12 p-12" style={{ borderBottom: '1px solid var(--border)' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.priority === 'High' ? 'var(--red)' : 'var(--blue)' }} />
+                <div style={{ flex: 1 }}>
+                  <div className="fs14 fw-bold">{t.title}</div>
+                  <div className="fs12 text-mute">In {t.projectName}</div>
+                </div>
                 <Badge type={t.status} />
               </div>
-              <Badge type={t.priority} />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -210,47 +274,49 @@ function TaskModal({ task, projectId, user, members, onSave, onClose }) {
   };
 
   return (
-    <Modal title={task ? "Edit Task" : "New Task"} onClose={onClose}>
-      <ErrorBox msg={err} />
-      <Field label="Title">
-        <input className="input" value={form.title} onChange={set("title")} disabled={!isAdmin} placeholder="Task title" />
-      </Field>
-      <Field label="Description">
-        <textarea className="input" style={{ minHeight: 72, resize: "vertical" }} value={form.description} onChange={set("description")} disabled={!isAdmin} placeholder="Optional description" />
-      </Field>
-      <div className="grid-2">
-        <Field label="Status">
-          <select className="input" value={form.status} onChange={set("status")}>
-            {["To Do", "In Progress", "Done"].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
+    <Modal title={task ? "Update Assignment" : "New Assignment"} onClose={onClose}>
+      <div className="entrance">
+        <ErrorBox msg={err} />
+        <Field label="Task Heading">
+          <input className="input" value={form.title} onChange={set("title")} disabled={!isAdmin} placeholder="What needs to be done?" />
         </Field>
-        <Field label="Priority">
-          <select className="input" value={form.priority} onChange={set("priority")} disabled={!isAdmin}>
-            {["Low", "Medium", "High"].map((p) => (
-              <option key={p}>{p}</option>
-            ))}
-          </select>
+        <Field label="Detailed Brief">
+          <textarea className="input" style={{ minHeight: 100, resize: "vertical" }} value={form.description} onChange={set("description")} disabled={!isAdmin} placeholder="Add more context here..." />
         </Field>
-      </div>
-      <div className="grid-2">
-        <Field label="Assignee">
-          <select className="input" value={form.assignedTo} onChange={set("assignedTo")} disabled={!isAdmin}>
-            {members?.map((m) => (
-              <option key={m.userId} value={m.userId}>
-                {m.userName}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Due Date">
-          <input className="input" type="date" value={form.dueDate} onChange={set("dueDate")} disabled={!isAdmin} />
-        </Field>
-      </div>
-      <div className="flex gap8 ml-auto" style={{ justifyContent: "flex-end", marginTop: 8 }}>
-        <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? "Saving..." : "Save Task"}</button>
+        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <Field label="Status">
+            <select className="input" value={form.status} onChange={set("status")}>
+              {["To Do", "In Progress", "Done"].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Priority Level">
+            <select className="input" value={form.priority} onChange={set("priority")} disabled={!isAdmin}>
+              {["Low", "Medium", "High"].map((p) => (
+                <option key={p}>{p}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <Field label="Assign To Member">
+            <select className="input" value={form.assignedTo} onChange={set("assignedTo")} disabled={!isAdmin}>
+              {members?.map((m) => (
+                <option key={m.userId} value={m.userId}>
+                  {m.userName}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Deadline">
+            <input className="input" type="date" value={form.dueDate} onChange={set("dueDate")} disabled={!isAdmin} />
+          </Field>
+        </div>
+        <div className="flex gap12 mt-20" style={{ justifyContent: "flex-end", marginTop: 24 }}>
+          <button className="btn" onClick={onClose}>Discard</button>
+          <button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? "Processing..." : "Commit Changes"}</button>
+        </div>
       </div>
     </Modal>
   );
@@ -286,7 +352,7 @@ function ProjectTasksView({ project, user, onBack }) {
   }, [refresh]);
 
   const cols = ["To Do", "In Progress", "Done"];
-  const colDot = { "To Do": "#a0a0b5", "In Progress": "#2563eb", Done: "#16a34a" };
+  const colColors = { "To Do": "var(--t3)", "In Progress": "var(--blue)", Done: "var(--green)" };
   const filtered = filter === "All" ? tasks : tasks.filter((t) => t.status === filter);
 
   const addMem = async () => {
@@ -310,95 +376,102 @@ function ProjectTasksView({ project, user, onBack }) {
     }
   };
 
-  if (loading) return <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>;
+  if (loading) return <div style={{ padding: "2rem", textAlign: "center" }} className="fade-in">Syncing tasks...</div>;
 
   return (
-    <div className="fade-up">
-      <div className="flex gap8 mb-20">
-        <button className="btn btn-sm" onClick={onBack}>← Back</button>
-        <div>
-          <div className="section-title" style={{ fontSize: 17 }}>{project.name}</div>
-          <div className="fs12 tc-2">{project.description}</div>
+    <div className="slide-up">
+      <div className="flex gap12 mb-20" style={{ alignItems: 'flex-start' }}>
+        <button className="btn" onClick={onBack} style={{ padding: '8px 12px' }}>←</button>
+        <div style={{ flex: 1 }}>
+          <h2 className="section-title" style={{ fontSize: 24 }}>{project.name}</h2>
+          <p className="text-mute">{project.description}</p>
         </div>
-        <div className="flex gap8 ml-auto">
-          <Badge type={project.members?.find((m) => m.userId === (user.id || user._id) || m.userId?._id === (user.id || user._id))?.role} />
-          {isAdmin && <button className="btn btn-sm" onClick={() => setShowMembers(true)}>👥 Members ({project.members?.length || 0})</button>}
-          {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => { setEditing(null); setShowNew(true); }}>+ New Task</button>}
+        <div className="flex gap12">
+          {isAdmin && <button className="btn" onClick={() => setShowMembers(true)}>👥 Members ({project.members?.length || 0})</button>}
+          {isAdmin && <button className="btn btn-primary" onClick={() => { setEditing(null); setShowNew(true); }}>+ Add Task</button>}
         </div>
       </div>
-      <div className="flex gap8 mb-16">
+
+      <div className="flex gap12 mb-20">
         {["All", ...cols].map((f) => (
-          <button key={f} className={`btn btn-sm${filter === f ? " btn-primary" : ""}`} onClick={() => setFilter(f)}>
-            {f}
-            {f !== "All" && ` (${tasks.filter((t) => t.status === f).length})`}
+          <button key={f} className={`btn ${filter === f ? "btn-primary" : ""}`} onClick={() => setFilter(f)}>
+            {f} {f !== "All" && <span style={{ opacity: 0.6, marginLeft: 4 }}>{tasks.filter((t) => t.status === f).length}</span>}
           </button>
         ))}
       </div>
+
       <div className="bento bento-3col">
-        {cols.map((col) => {
+        {cols.map((col, idx) => {
           const ct = filtered.filter((t) => t.status === col);
           return (
-            <div key={col} className="col-wrap">
-              <div className="col-head">
-                <div className="col-dot" style={{ background: colDot[col] }} />
-                <span className="col-title">{col}</span>
-                <span className="col-count">{ct.length}</span>
+            <div key={col} className="card glass entrance" style={{ animationDelay: `${idx * 0.15}s`, background: 'rgba(255,255,255,0.3)', minHeight: 500 }}>
+              <div className="flex justify-between mb-20" style={{ justifyContent: 'space-between', borderBottom: `2px solid ${colColors[col]}`, paddingBottom: 12 }}>
+                <span className="fw-bold" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>{col}</span>
+                <Badge type={ct.length.toString()} />
               </div>
-              {ct.map((task) => {
-                const assigneeUser = { id: task.assignedTo, name: task.assignedToName, email: task.assignedToEmail };
-                const late = task.dueDate < td && task.status !== "Done";
-                return (
-                  <div key={task.id} className={`task-card${late ? " overdue" : ""}`} onClick={() => { setEditing(task); setShowNew(true); }}>
-                    <div className="flex gap6 mb-6">
-                      <Badge type={task.priority} />
-                      {late && <span className="fs12 tc-red ml-auto pulse">⚠ Overdue</span>}
-                    </div>
-                    <div className="task-title">{task.title}</div>
-                    {task.description && <div className="task-desc">{task.description.slice(0, 80)}{task.description.length > 80 ? "…" : ""}</div>}
-                    <div className="task-footer">
-                      <div className="flex gap6">
-                        {assigneeUser && <Avatar user={assigneeUser} size={20} />}
-                        <span className="fs12 tc-2">{assigneeUser?.name?.split(" ")[0]}</span>
+              
+              <div className="flex flex-col gap12" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {ct.map((task) => {
+                  const assigneeUser = { id: task.assignedTo, name: task.assignedToName, email: task.assignedToEmail };
+                  const late = task.dueDate < td && task.status !== "Done";
+                  return (
+                    <div key={task.id} className="card glass card-clickable slide-up" style={{ padding: 16, background: '#fff' }} onClick={() => { setEditing(task); setShowNew(true); }}>
+                      <div className="flex justify-between mb-8" style={{ justifyContent: 'space-between' }}>
+                        <Badge type={task.priority} />
+                        {late && <span className="fs12 text-mute pulse-animation" style={{ color: 'var(--red)' }}>⚠ Overdue</span>}
                       </div>
-                      <span className={`task-due${late ? " late" : ""}`}>Due {task.dueDate}</span>
+                      <div className="fw-bold fs15 mb-8" style={{ fontSize: 15 }}>{task.title}</div>
+                      <div className="flex justify-between mt-12" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div className="flex gap8">
+                          <Avatar user={assigneeUser} size={24} />
+                          <span className="fs12 text-mute">{assigneeUser?.name?.split(" ")[0]}</span>
+                        </div>
+                        <div className="fs12 text-mute"><Calendar size={12}/> {task.dueDate}</div>
+                      </div>
                     </div>
-                    {isAdmin && (
-                      <button className="btn btn-danger btn-xs" style={{ marginTop: 8 }} onClick={(e) => { e.stopPropagation(); if (confirm("Delete this task?")) deleteTask(task.id); }}>Delete</button>
-                    )}
+                  );
+                })}
+                {ct.length === 0 && (
+                  <div className="empty text-center" style={{ textAlign: 'center', padding: '40px 0' }}>
+                    <Inbox size={40} className="text-mute mb-12" style={{ margin: '0 auto 12px' }}/>
+                    <p className="text-mute fs13">Empty column</p>
                   </div>
-                );
-              })}
-              {ct.length === 0 && <div className="empty" style={{ padding: "1.5rem 0" }}><div className="empty-icon"><Inbox size={48} strokeWidth={1} /></div><p className="fs12">No tasks here</p></div>}
+                )}
+              </div>
             </div>
           );
         })}
       </div>
+
       {showNew && <TaskModal task={editing} projectId={project.id} user={user} members={project.members} onSave={() => { refresh(); setShowNew(false); setEditing(null); }} onClose={() => { setShowNew(false); setEditing(null); }} />}
+      
       {showMembers && isAdmin && (
-        <Modal title="Manage Members" onClose={() => { setShowMembers(false); setMemErr(""); }}>
-          <div style={{ marginBottom: "1rem" }}>
+        <Modal title="Project Access" onClose={() => { setShowMembers(false); setMemErr(""); }}>
+          <div style={{ marginBottom: "1.5rem" }}>
             {project.members?.map((m) => {
               const u = { id: m.userId, name: m.userName, email: m.userEmail };
               return (
-                <div key={m.userId} className="member-row">
-                  <Avatar user={u} size={30} />
+                <div key={m.userId} className="flex gap12 p-12 mb-8" style={{ background: 'var(--bg-sidebar)', borderRadius: 'var(--r-md)' }}>
+                  <Avatar user={u} size={36} />
                   <div style={{ flex: 1 }}>
-                    <div className="fs13 fw6">{u?.name}</div>
-                    <div className="fs12 tc-2">{u?.email}</div>
+                    <div className="fs14 fw-bold">{u?.name}</div>
+                    <div className="fs12 text-mute">{u?.email}</div>
                   </div>
                   <Badge type={m.role} />
-                  {m.userId !== user.id && <button className="btn btn-danger btn-xs" onClick={() => api.removeMember(user.id, project.id, m.userId)}>Remove</button>}
+                  {m.userId !== user.id && <button className="btn" style={{ padding: '4px 8px', fontSize: 11 }} onClick={() => api.removeMember(user.id, project.id, m.userId)}>Remove</button>}
                 </div>
               );
             })}
           </div>
-          <Field label="Add member by email">
-            <div className="flex gap8">
-              <input className="input" placeholder="user@example.com" value={memEmail} onChange={(e) => setMemEmail(e.target.value)} style={{ flex: 1 }} />
-              <button className="btn btn-primary" onClick={addMem}>Add</button>
-            </div>
-          </Field>
-          <ErrorBox msg={memErr} />
+          <div className="card glass p-16">
+            <Field label="Invite via Email">
+              <div className="flex gap8">
+                <input className="input" placeholder="teammate@company.com" value={memEmail} onChange={(e) => setMemEmail(e.target.value)} style={{ flex: 1 }} />
+                <button className="btn btn-primary" onClick={addMem}>Invite</button>
+              </div>
+            </Field>
+            <ErrorBox msg={memErr} />
+          </div>
         </Modal>
       )}
     </div>
@@ -442,7 +515,7 @@ function ProjectsView({ user, onSelect }) {
 
   const del = async (e, id) => {
     e.stopPropagation();
-    if (!confirm("Delete this project and all its tasks?")) return;
+    if (!confirm("Delete this workspace? This cannot be undone.")) return;
     try {
       await api.deleteProject(user.id, id);
       refresh();
@@ -451,51 +524,76 @@ function ProjectsView({ user, onSelect }) {
     }
   };
 
-  if (loading) return <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>;
+  if (loading) return <div style={{ padding: "2rem", textAlign: "center" }} className="fade-in">Loading workspaces...</div>;
 
   return (
-    <div className="fade-up">
-      <div className="section-head">
+    <div className="slide-up">
+      <div className="section-head mb-20">
         <div>
-          <div className="section-title">Projects</div>
-          <div className="section-sub">Your active workspaces</div>
+          <h2 className="section-title">Workspaces</h2>
+          <p className="text-mute">Manage your collaborative projects</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreate(true)}>+ New Project</button>
+        <button className="btn btn-primary" onClick={() => setShowCreate(true)}>+ New Workspace</button>
       </div>
-      <div className="bento" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(290px,1fr))" }}>
-        {projects.map((proj) => {
+
+      <div className="bento" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(340px,1fr))" }}>
+        {projects.map((proj, i) => {
           const uId = user.id || user._id;
           const role = proj.members?.find((m) => m.userId === uId || m.userId?._id === uId)?.role;
           return (
-            <div key={proj.id} className="card card-clickable" onClick={() => onSelect(proj)}>
-              <div className="flex gap8 mb-12">
+            <div key={proj.id} className="card glass card-clickable entrance" style={{ animationDelay: `${i * 0.1}s` }} onClick={() => onSelect(proj)}>
+              <div className="flex justify-between mb-16" style={{ justifyContent: 'space-between' }}>
                 <Badge type={role} />
-                <span className="fs12 tc-2 ml-auto">{proj.createdAt?.split("T")[0] || "Today"}</span>
+                <span className="fs12 text-mute">{proj.createdAt?.split("T")[0] || "Active"}</span>
               </div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, letterSpacing: "-.2px" }}>{proj.name}</div>
-              <div className="fs13 tc-2" style={{ marginBottom: 14, lineHeight: 1.5 }}>{proj.description}</div>
-              <div className="flex gap6 mb-6">
-                <span className="fs12 tc-2">Members</span>
-                <span className="fs12 fw6 ml-auto">{proj.members?.length || 0}</span>
+              <h3 className="fw-bold mb-8" style={{ fontSize: 18 }}>{proj.name}</h3>
+              <p className="text-mute fs14 mb-20" style={{ lineHeight: 1.6, minHeight: 44 }}>{proj.description}</p>
+              
+              <div className="flex justify-between mb-12" style={{ justifyContent: 'space-between' }}>
+                <div className="flex -space-x-2">
+                  {proj.members?.slice(0, 3).map((m, idx) => (
+                    <div key={idx} style={{ marginLeft: idx > 0 ? -8 : 0, border: '2px solid #fff', borderRadius: '50%' }}>
+                      <Avatar user={{ id: m.userId, name: m.userName, email: m.userEmail }} size={28} />
+                    </div>
+                  ))}
+                  {proj.members?.length > 3 && (
+                    <div className="flex items-center justify-center fs11 fw-bold" style={{ marginLeft: -8, width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-bg)', border: '2px solid #fff' }}>
+                      +{proj.members.length - 3}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap6">
+                  <span className="fs12 fw-bold">{proj.members?.length || 0} Members</span>
+                </div>
               </div>
-              <ProgressBar value={50} />
-              <div className="flex gap8" style={{ marginTop: 12 }}>
-                <div className="flex gap6">{proj.members?.slice(0, 4).map((m) => <Avatar key={m.userId} user={{ id: m.userId, name: m.userName, email: m.userEmail }} size={22} />)}</div>
-                {role === "Admin" && <button className="btn btn-danger btn-xs" onClick={(e) => del(e, proj.id)}>Delete</button>}
+              
+              <div className="mt-12 pt-12" style={{ borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="fs12 fw-bold text-mute">Workspace Active</span>
+                {role === "Admin" && <button className="btn" style={{ padding: '4px 8px', fontSize: 11 }} onClick={(e) => del(e, proj.id)}>Delete</button>}
               </div>
             </div>
           );
         })}
-        {projects.length === 0 && <div className="card empty" style={{ gridColumn: "1/-1" }}><div className="empty-icon"><ClipboardList size={48} strokeWidth={1} /></div><p>No projects yet — create your first one!</p></div>}
+        {projects.length === 0 && (
+          <div className="card glass empty entrance" style={{ gridColumn: "1/-1", padding: 60 }}>
+            <ClipboardList size={64} className="text-mute mb-20" style={{ margin: '0 auto 20px' }}/>
+            <h3 className="fw-bold mb-8">No Workspaces Found</h3>
+            <p className="text-mute mb-20">Get started by creating your first project workspace.</p>
+            <button className="btn btn-primary" onClick={() => setShowCreate(true)}>Create First Workspace</button>
+          </div>
+        )}
       </div>
+
       {showCreate && (
-        <Modal title="New Project" onClose={() => { setShowCreate(false); setErr(""); }}>
-          <ErrorBox msg={err} />
-          <Field label="Project Name"><input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Website Redesign" /></Field>
-          <Field label="Description"><textarea className="input" style={{ minHeight: 80, resize: "vertical" }} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="What is this project about?" /></Field>
-          <div className="flex gap8" style={{ justifyContent: "flex-end" }}>
-            <button className="btn" onClick={() => { setShowCreate(false); setErr(""); }}>Cancel</button>
-            <button className="btn btn-primary" onClick={create}>Create Project</button>
+        <Modal title="Establish Workspace" onClose={() => { setShowCreate(false); setErr(""); }}>
+          <div className="entrance">
+            <ErrorBox msg={err} />
+            <Field label="Workspace Title"><input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Design Systems" /></Field>
+            <Field label="Vision & Description"><textarea className="input" style={{ minHeight: 120, resize: "vertical" }} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="What will this workspace achieve?" /></Field>
+            <div className="flex gap12 mt-20" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" onClick={() => { setShowCreate(false); setErr(""); }}>Cancel</button>
+              <button className="btn btn-primary" onClick={create}>Initialize Workspace</button>
+            </div>
           </div>
         </Modal>
       )}
@@ -543,39 +641,58 @@ function MyTasksView({ user }) {
     }
   };
 
-  if (loading) return <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>;
+  if (loading) return <div style={{ padding: "2rem", textAlign: "center" }} className="fade-in">Loading your tasks...</div>;
 
   return (
-    <div className="fade-up">
-      <div className="section-head">
+    <div className="slide-up">
+      <div className="section-head mb-20">
         <div>
-          <div className="section-title">My Tasks</div>
-          <div className="section-sub">{all.length} task{all.length !== 1 ? "s" : ""} assigned to you</div>
+          <h2 className="section-title">My Assignment Log</h2>
+          <p className="text-mute">{all.length} active items in your queue</p>
         </div>
       </div>
-      <div className="flex gap8 mb-16">
+
+      <div className="flex gap12 mb-20">
         {["All", "To Do", "In Progress", "Done", "Overdue"].map((f) => (
-          <button key={f} className={`btn btn-sm${filter === f ? " btn-primary" : ""}`} onClick={() => setFilter(f)}>{f}</button>
+          <button key={f} className={`btn ${filter === f ? "btn-primary" : ""}`} onClick={() => setFilter(f)}>{f}</button>
         ))}
       </div>
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+
+      <div className="card glass entrance" style={{ padding: 0, overflow: "hidden" }}>
         {filtered.length === 0 ? (
-          <div className="empty"><div className="empty-icon"><CheckCircle2 size={48} strokeWidth={1} /></div><p>No tasks found for this filter</p></div>
+          <div className="empty" style={{ padding: 80 }}>
+            <CheckCircle2 size={64} className="text-mute mb-20" style={{ margin: '0 auto 20px' }}/>
+            <p className="fw-bold">No tasks matching your selection</p>
+          </div>
         ) : (
-          <table className="tbl">
-            <thead><tr><th>Task</th><th>Project</th><th>Priority</th><th>Status</th><th>Due Date</th><th>Update</th></tr></thead>
+          <table className="tbl" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)' }}>
+                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Task Details</th>
+                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Project</th>
+                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Priority</th>
+                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timeline</th>
+                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Action</th>
+              </tr>
+            </thead>
             <tbody>
               {filtered.map((task) => {
                 const late = task.dueDate < td && task.status !== "Done";
                 return (
-                  <tr key={task.id}>
-                    <td><div className="fw6">{task.title}</div>{task.description && <div className="fs12 tc-2">{task.description.slice(0, 55)}…</div>}</td>
-                    <td className="tc-2">{task.projectName}</td>
-                    <td><Badge type={task.priority} /></td>
-                    <td><Badge type={task.status} /></td>
-                    <td className={late ? "tc-red fw6" : "tc-2"}>{task.dueDate}{late && " ⚠"}</td>
-                    <td>
-                      <select className="input" style={{ width: "auto", fontSize: 12, padding: "4px 8px" }} value={task.status} onChange={(e) => updateStatus(task, e.target.value)}>
+                  <tr key={task.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }}>
+                    <td style={{ padding: '20px 24px' }}>
+                      <div className="fw-bold fs15">{task.title}</div>
+                      {task.description && <div className="fs12 text-mute mt-4">{task.description.slice(0, 60)}…</div>}
+                    </td>
+                    <td style={{ padding: '20px 24px' }} className="text-mute fs14">{task.projectName}</td>
+                    <td style={{ padding: '20px 24px' }}><Badge type={task.priority} /></td>
+                    <td style={{ padding: '20px 24px' }}>
+                      <div className={late ? "fw-bold" : "text-mute"} style={{ color: late ? 'var(--red)' : 'inherit', fontSize: 13 }}>
+                        {task.dueDate} {late && "⚠"}
+                      </div>
+                    </td>
+                    <td style={{ padding: '20px 24px' }}>
+                      <select className="input" style={{ width: "auto", fontSize: 12, padding: "6px 12px" }} value={task.status} onChange={(e) => updateStatus(task, e.target.value)}>
                         {["To Do", "In Progress", "Done"].map((s) => (
                           <option key={s}>{s}</option>
                         ))}
@@ -627,24 +744,36 @@ export default function App() {
     setProj(null);
   };
 
-  if (loading) return <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>;
+  if (loading) return (
+    <div className="app flex items-center justify-center" style={{ background: 'var(--bg)' }}>
+      <div className="flex flex-col items-center gap12">
+        <div className="logo-icon pulse-animation" style={{ width: 60, height: 60 }}>
+          <Layers size={32} color="#fff" />
+        </div>
+        <p className="fw-bold mt-12">TaskFlow Cloud</p>
+      </div>
+    </div>
+  );
+  
   if (!auth) return <AuthScreen onAuth={handleAuth} />;
 
   const { user } = auth;
   const nav = [
-    { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
-    { id: "projects", label: "Projects", icon: <Briefcase size={18} /> },
-    { id: "mytasks", label: "My Tasks", icon: <CheckCircle2 size={18} /> },
+    { id: "dashboard", label: "Overview", icon: <LayoutDashboard size={20} /> },
+    { id: "projects", label: "Workspaces", icon: <Briefcase size={20} /> },
+    { id: "mytasks", label: "Queue", icon: <CheckCircle2 size={20} /> },
   ];
 
   return (
-    <div className="app">
+    <div className="app fade-in">
       <aside className="sidebar">
         <div className="sb-logo">
-          <div className="logo-icon"><Layers size={22} color="#fff" /></div>
+          <div className="logo-icon"><Layers size={24} color="#fff" /></div>
           <span className="logo-text">TaskFlow</span>
         </div>
+        
         <nav className="sb-nav">
+          <div className="text-mute mb-12" style={{ padding: '0 16px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platform</div>
           {nav.map((n) => (
             <button key={n.id} className={`nav-btn${view === n.id && !proj ? " active" : ""}`} onClick={() => { setView(n.id); setProj(null); }}>
               <span className="nav-icon">{n.icon}</span>
@@ -652,36 +781,46 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sb-user">
-          <div className="flex gap8 mb-12">
-            <Avatar user={user} size={32} />
-            <div>
-              <div className="fs13 fw6">{user.name}</div>
-              <div className="fs12 tc-2">{user.email}</div>
+        
+        <div className="sb-user slide-up">
+          <div className="flex gap12 mb-20">
+            <Avatar user={user} size={40} />
+            <div style={{ overflow: 'hidden' }}>
+              <div className="fw-bold fs14" style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{user.name}</div>
+              <div className="text-mute fs12" style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{user.email}</div>
             </div>
           </div>
-          <button className="btn btn-full" style={{ fontSize: 12 }} onClick={logout}>Sign Out</button>
+          <button className="btn btn-full w-full" style={{ width: '100%', fontSize: 13, background: 'var(--accent-bg)', border: 'none' }} onClick={logout}>Sign Out</button>
         </div>
       </aside>
+      
       <main className="main">
         <header className="topbar">
-          <div className="fw6" style={{ fontSize: 15 }}>{proj ? proj.name : nav.find((n) => n.id === view)?.label}</div>
-          <div className="flex gap8">
-            <span className="fs12 tc-2">Signed in as {user.name}</span>
-            <Avatar user={user} size={28} />
+          <div className="flex gap12">
+            <div className="fw-bold" style={{ fontSize: 18 }}>{proj ? proj.name : nav.find((n) => n.id === view)?.label}</div>
+            {proj && <Badge type="Workspace" />}
+          </div>
+          <div className="flex gap12">
+            <div className="flex gap8 p-8" style={{ background: 'var(--accent-bg)', borderRadius: 'var(--r-md)', padding: '6px 12px' }}>
+              <TrendingUp size={14} className="text-mute"/>
+              <span className="fs12 fw-bold">Active Stream</span>
+            </div>
+            <div style={{ width: 1, height: 24, background: 'var(--border)', margin: '0 8px' }} />
+            <Avatar user={user} size={36} />
           </div>
         </header>
+        
         <div className="content">
           <ErrorBoundary>
-          {proj ? (
-            <ProjectTasksView key={proj.id} project={proj} user={user} onBack={() => { setProj(null); setView("projects"); }} />
-          ) : view === "dashboard" ? (
-            <Dashboard user={user} />
-          ) : view === "projects" ? (
-            <ProjectsView user={user} onSelect={(p) => setProj(p)} />
-          ) : (
-            <MyTasksView user={user} />
-          )}
+            {proj ? (
+              <ProjectTasksView key={proj.id} project={proj} user={user} onBack={() => { setProj(null); setView("projects"); }} />
+            ) : view === "dashboard" ? (
+              <Dashboard user={user} />
+            ) : view === "projects" ? (
+              <ProjectsView user={user} onSelect={(p) => setProj(p)} />
+            ) : (
+              <MyTasksView user={user} />
+            )}
           </ErrorBoundary>
         </div>
       </main>
