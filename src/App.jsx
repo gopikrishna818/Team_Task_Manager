@@ -664,6 +664,98 @@ function SettingsView({ user, activeTab }) {
   );
 }
 
+// ── Members View ─────────────────────────────────────────────────────────────
+function MembersView({ user, projects, allTasks, onRefresh }) {
+  const [search, setSearch] = useState("");
+
+  // Aggregate unique members across all projects
+  const members = useMemo(() => {
+    const map = new Map();
+    projects.forEach(p => {
+      (p.members || []).forEach(m => {
+        const uid = (m.userId?._id || m.userId || '').toString();
+        if (!uid) return;
+        if (!map.has(uid)) {
+          map.set(uid, {
+            userId: uid,
+            userName: m.userName || 'Unknown',
+            userEmail: m.userEmail || '',
+            role: m.role,
+            projects: [p.name],
+          });
+        } else {
+          const existing = map.get(uid);
+          if (!existing.projects.includes(p.name)) existing.projects.push(p.name);
+          if (m.role === 'Admin') existing.role = 'Admin'; // elevate to admin if admin anywhere
+        }
+      });
+    });
+    return [...map.values()];
+  }, [projects]);
+
+  const taskCountFor = (uid) => allTasks.filter(t => t.assignedTo === uid).length;
+
+  const filtered = members.filter(m =>
+    m.userName.toLowerCase().includes(search.toLowerCase()) ||
+    m.userEmail.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const myId = user.id || user._id;
+  const iAmAdmin = projects.some(p =>
+    p.members?.some(m => {
+      const uid = (m.userId?._id || m.userId || '').toString();
+      return uid === myId && m.role === 'Admin';
+    })
+  );
+
+  return (
+    <div className="fade-in">
+      <div className="flex justify-between mb-32">
+        <div>
+          <h2 style={{ fontSize: 28, fontWeight: 800 }}>Members</h2>
+          <p className="text-mute">Your team across all workspaces — {members.length} people</p>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="tasks-card" style={{ padding: '12px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Search size={16} color="#999" />
+        <input
+          style={{ border: 'none', outline: 'none', fontSize: 14, fontWeight: 600, flex: 1, color: '#111', background: 'transparent' }}
+          placeholder="Search by name or email..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* Member cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {filtered.length === 0 && (
+          <div className="tasks-card" style={{ textAlign: 'center', padding: 60, color: '#999' }}>No members found.</div>
+        )}
+        {filtered.map(m => (
+          <div key={m.userId} className="tasks-card" style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '20px 24px' }}>
+            <Avatar user={{ name: m.userName, email: m.userEmail }} size={48} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{m.userName}</div>
+              <div style={{ fontSize: 13, color: '#999', fontWeight: 600 }}>{m.userEmail || 'No email'}</div>
+              <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {m.projects.map(pName => (
+                  <span key={pName} className="badge" style={{ background: '#f4f4f4', color: '#555', fontSize: 11 }}>{pName}</span>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+              <Badge type={m.role} />
+              <span style={{ fontSize: 12, color: '#999', fontWeight: 700 }}>{taskCountFor(m.userId)} task{taskCountFor(m.userId) !== 1 ? 's' : ''} assigned</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── App Shell ────────────────────────────────────────────────────────────────
 export default function App() {
   const [auth, setAuth] = useState(null);
@@ -782,11 +874,7 @@ export default function App() {
           ) : view === "queue" ? (
             <MyTasksView user={user} tasks={allTasks} />
           ) : view === "members" ? (
-            <div className="fade-in">
-              <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>Members</h2>
-              <p className="text-mute mb-32">Manage your team and their permissions</p>
-              <div className="tasks-card">Team management coming soon...</div>
-            </div>
+            <MembersView user={user} projects={projects} allTasks={allTasks} onRefresh={() => refreshAll(user.id)} />
           ) : ['profile', 'notifications', 'security', 'billing', 'integrations'].includes(view) ? (
             <SettingsView user={user} activeTab={view} />
           ) : (
