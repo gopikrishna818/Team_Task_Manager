@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { api, parseToken, genToken, getUser } from "./data.js";
 import { Avatar, Modal, Field, Badge, ProgressBar, ErrorBox } from "./ui.jsx";
 import { 
@@ -13,7 +13,7 @@ const today = () => new Date().toISOString().split("T")[0];
 // ── Components ───────────────────────────────────────────────────────────────
 
 function DonutChart({ data, total }) {
-  const colors = ["#0ea5e9", "#f59e0b", "#10b981"]; // Blue, Amber, Green
+  const colors = ["#0ea5e9", "#f59e0b", "#10b981"];
   const entries = [["To Do", data["To Do"] || 0], ["In Progress", data["In Progress"] || 0], ["Done", data["Done"] || 0]];
   let cumulativePercent = 0;
 
@@ -129,21 +129,8 @@ function AuthScreen({ onAuth }) {
 }
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
-function Dashboard({ user, onNavigate, onNewTask }) {
-  const [d, setD] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const data = await api.getDashboard(user.id);
-        setD(data);
-      } catch (err) { console.error(err); } finally { setLoading(false); }
-    };
-    fetchDashboard();
-  }, [user.id]);
-
-  if (loading || !d) return <div style={{ padding: 48 }}>Loading dashboard...</div>;
+function Dashboard({ user, data, onNavigate, onNewTask }) {
+  if (!data) return <div style={{ padding: 48 }}>Loading dashboard...</div>;
 
   return (
     <div className="fade-in">
@@ -163,10 +150,10 @@ function Dashboard({ user, onNavigate, onNewTask }) {
 
       <div className="content">
         <div className="metric-grid">
-          <MetricCard title="My Projects" value={d.projects} trend="this month" icon={<Briefcase size={18}/>} color="#0ea5e9" onClick={() => onNavigate('projects')} />
-          <MetricCard title="Total Tasks" value={d.totalTasks} trend="since last week" icon={<Zap size={18}/>} color="#8b5cf6" onClick={() => onNavigate('queue')} />
-          <MetricCard title="In Progress" value={d.byStatus["In Progress"] || 0} trend="Active right now" icon={<Clock size={18}/>} color="#f59e0b" onClick={() => onNavigate('queue')} />
-          <MetricCard title="Completed" value={d.byStatus["Done"] || 0} trend="completion rate" icon={<CheckCircle2 size={18}/>} color="#10b981" onClick={() => onNavigate('queue')} />
+          <MetricCard title="My Projects" value={data.projects} trend="this month" icon={<Briefcase size={18}/>} color="#0ea5e9" onClick={() => onNavigate('projects')} />
+          <MetricCard title="Total Tasks" value={data.totalTasks} trend="since last week" icon={<Zap size={18}/>} color="#8b5cf6" onClick={() => onNavigate('queue')} />
+          <MetricCard title="In Progress" value={data.byStatus["In Progress"] || 0} trend="Active right now" icon={<Clock size={18}/>} color="#f59e0b" onClick={() => onNavigate('queue')} />
+          <MetricCard title="Completed" value={data.byStatus["Done"] || 0} trend="completion rate" icon={<CheckCircle2 size={18}/>} color="#10b981" onClick={() => onNavigate('queue')} />
         </div>
 
         <div className="charts-grid">
@@ -199,7 +186,7 @@ function Dashboard({ user, onNavigate, onNewTask }) {
                 <div className="text-mute" style={{ fontSize: 13 }}>All tasks across projects</div>
               </div>
             </div>
-            <DonutChart data={d.byStatus} total={d.totalTasks} />
+            <DonutChart data={data.byStatus} total={data.totalTasks} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {["To Do", "In Progress", "Done"].map((s, i) => (
                 <div key={s} className="flex justify-between">
@@ -208,7 +195,7 @@ function Dashboard({ user, onNavigate, onNewTask }) {
                     <span style={{ fontSize: 14, fontWeight: 600 }}>{s}</span>
                   </div>
                   <div style={{ width: 140, height: 4, background: '#f4f4f4', borderRadius: 2, position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', borderRadius: 2, background: ["#0ea5e9", "#f59e0b", "#10b981"][i], width: `${(d.byStatus[s] || 0) / (d.totalTasks || 1) * 100}%` }} />
+                    <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', borderRadius: 2, background: ["#0ea5e9", "#f59e0b", "#10b981"][i], width: `${(data.byStatus[s] || 0) / (data.totalTasks || 1) * 100}%` }} />
                   </div>
                 </div>
               ))}
@@ -233,7 +220,7 @@ function Dashboard({ user, onNavigate, onNewTask }) {
                 </tr>
               </thead>
               <tbody>
-                {d.recentTasks.map(t => (
+                {data.recentTasks.map(t => (
                   <tr key={t.id} onClick={() => onNavigate('projects')} style={{ cursor: 'pointer' }}>
                     <td>
                       <div className="task-cell">
@@ -254,7 +241,7 @@ function Dashboard({ user, onNavigate, onNewTask }) {
           <div className="tasks-card" style={{ display: 'flex', flexDirection: 'column' }}>
             <h2 className="chart-title mb-20" style={{ marginBottom: 24 }}>Team members</h2>
             <div className="team-list">
-              {d.byUser.slice(0, 4).map(({ user: u, count }) => (
+              {data.byUser.slice(0, 4).map(({ user: u, count }) => (
                 <div key={u.id} className="member-item" onClick={() => onNavigate('members')} style={{ cursor: 'pointer' }}>
                   <Avatar user={u} size={36} />
                   <div className="member-info">
@@ -267,7 +254,7 @@ function Dashboard({ user, onNavigate, onNewTask }) {
             <div style={{ marginTop: 'auto', paddingTop: 32 }}>
               <div className="alert-box" onClick={() => onNavigate('queue')} style={{ cursor: 'pointer' }}>
                 <AlertCircle size={18} />
-                <span>{d.overdue} task{d.overdue !== 1 ? 's are' : ' is'} past its due</span>
+                <span>{data.overdue} task{data.overdue !== 1 ? 's are' : ' is'} past its due</span>
               </div>
             </div>
           </div>
@@ -357,7 +344,7 @@ function TaskModal({ task, projectId, user, members, onSave, onClose }) {
 }
 
 // ── Project Tasks ────────────────────────────────────────────────────────────
-function ProjectTasksView({ project, user, onBack }) {
+function ProjectTasksView({ project, user, onBack, onRefresh }) {
   const uId = user.id || user._id;
   const isAdmin = project.members?.find((m) => m.userId === uId || m.userId?._id === uId)?.role === "Admin";
   const [tasks, setTasks] = useState([]);
@@ -392,6 +379,7 @@ function ProjectTasksView({ project, user, onBack }) {
       await api.addMember(user.id, project.id, memEmail, "Member");
       setMemEmail("");
       setMemErr("");
+      onRefresh();
     } catch (e) {
       setMemErr(e.message);
     }
@@ -441,7 +429,7 @@ function ProjectTasksView({ project, user, onBack }) {
         ))}
       </div>
 
-      {showNew && <TaskModal task={editing} projectId={project.id} user={user} members={project.members} onSave={() => { refresh(); setShowNew(false); setEditing(null); }} onClose={() => { setShowNew(false); setEditing(null); }} />}
+      {showNew && <TaskModal task={editing} projectId={project.id} user={user} members={project.members} onSave={() => { refresh(); setShowNew(false); setEditing(null); onRefresh(); }} onClose={() => { setShowNew(false); setEditing(null); }} />}
       
       {showMembers && isAdmin && (
         <Modal title="Project Access" onClose={() => setShowMembers(false)}>
@@ -455,7 +443,7 @@ function ProjectTasksView({ project, user, onBack }) {
                      <div style={{ fontSize: 12, color: '#999' }}>{m.role}</div>
                    </div>
                  </div>
-                 {m.userId !== user.id && <button className="btn" style={{ padding: '6px 12px', fontSize: 11 }} onClick={() => api.removeMember(user.id, project.id, m.userId)}>Remove</button>}
+                 {m.userId !== user.id && <button className="btn" style={{ padding: '6px 12px', fontSize: 11 }} onClick={() => api.removeMember(user.id, project.id, m.userId).then(onRefresh)}>Remove</button>}
                </div>
              ))}
            </div>
@@ -475,29 +463,17 @@ function ProjectTasksView({ project, user, onBack }) {
 }
 
 // ── Projects ─────────────────────────────────────────────────────────────────
-function ProjectsView({ user, onSelect }) {
-  const [projects, setProjects] = useState([]);
+function ProjectsView({ user, projects, onSelect, onRefresh }) {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", description: "" });
   const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.getProjects(user.id);
-      setProjects(data);
-    } catch (err) { console.error(err); } finally { setLoading(false); }
-  }, [user.id]);
-
-  useEffect(() => { refresh(); }, [refresh]);
 
   const create = async () => {
     try {
       await api.createProject(user.id, form);
       setShowCreate(false);
       setForm({ name: "", description: "" });
-      refresh();
+      onRefresh();
     } catch (e) { setErr(e.message); }
   };
 
@@ -506,11 +482,9 @@ function ProjectsView({ user, onSelect }) {
     if (!confirm("Delete this workspace?")) return;
     try {
       await api.deleteProject(user.id, id);
-      refresh();
+      onRefresh();
     } catch (e) { alert(e.message); }
   };
-
-  if (loading) return <div style={{ padding: 48 }}>Loading workspaces...</div>;
 
   return (
     <div className="fade-in">
@@ -561,30 +535,18 @@ function ProjectsView({ user, onSelect }) {
 }
 
 // ── My Tasks ─────────────────────────────────────────────────────────────────
-function MyTasksView({ user }) {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setLoading(true);
-        const data = await api.getTasks(user.id);
-        const uId = user.id || user._id;
-        setTasks(data.filter(t => t.assignedTo === uId));
-      } catch (err) { console.error(err); } finally { setLoading(false); }
-    };
-    fetchTasks();
-  }, [user.id]);
-
-  if (loading) return <div style={{ padding: 48 }}>Loading your tasks...</div>;
+function MyTasksView({ user, tasks }) {
+  const myTasks = useMemo(() => {
+    const uId = user.id || user._id;
+    return tasks.filter(t => t.assignedTo === uId);
+  }, [tasks, user]);
 
   return (
     <div className="fade-in">
       <div className="flex justify-between mb-32">
         <div>
           <h2 style={{ fontSize: 28, fontWeight: 800 }}>My Tasks</h2>
-          <p className="text-mute">You have {tasks.length} active assignments</p>
+          <p className="text-mute">You have {myTasks.length} active assignments</p>
         </div>
       </div>
 
@@ -600,7 +562,7 @@ function MyTasksView({ user }) {
             </tr>
           </thead>
           <tbody>
-            {tasks.map(t => (
+            {myTasks.map(t => (
               <tr key={t.id}>
                 <td><div className="task-name">{t.title}</div></td>
                 <td className="text-mute" style={{ fontSize: 14 }}>{t.projectName}</td>
@@ -611,7 +573,7 @@ function MyTasksView({ user }) {
             ))}
           </tbody>
         </table>
-        {tasks.length === 0 && <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>No tasks assigned to you yet.</div>}
+        {myTasks.length === 0 && <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>No tasks assigned to you yet.</div>}
       </div>
     </div>
   );
@@ -711,7 +673,25 @@ export default function App() {
   const [proj, setProj] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
+  
+  // Prefetched Data State
+  const [dashboardData, setDashboardData] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [allTasks, setAllTasks] = useState([]);
+
+  const refreshAll = useCallback(async (uId) => {
+    if (!uId) return;
+    try {
+      const [dash, projs, tasks] = await Promise.all([
+        api.getDashboard(uId),
+        api.getProjects(uId),
+        api.getTasks(uId)
+      ]);
+      setDashboardData(dash);
+      setProjects(projs);
+      setAllTasks(tasks);
+    } catch (err) { console.error("Prefetch failed:", err); }
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -721,17 +701,16 @@ export default function App() {
           const user = await getUser();
           if (user) {
             setAuth({ token, user });
-            const pData = await api.getProjects(user.id);
-            setProjects(pData);
+            await refreshAll(user.id);
           }
         } catch (err) { localStorage.removeItem("taskflow_token"); }
       }
       setLoading(false);
     };
     checkAuth();
-  }, []);
+  }, [refreshAll]);
 
-  const handleAuth = (r) => { genToken(r.token); setAuth({ token: r.token, user: r.user }); };
+  const handleAuth = (r) => { genToken(r.token); setAuth({ token: r.token, user: r.user }); refreshAll(r.user.id); };
   const logout = () => { localStorage.removeItem("taskflow_token"); setAuth(null); setView("dashboard"); setProj(null); };
 
   if (loading) return null;
@@ -758,7 +737,7 @@ export default function App() {
           </button>
           <button className={`nav-btn ${view === 'queue' ? 'active' : ''}`} onClick={() => { setView('queue'); setProj(null); }}>
             <div className="flex gap12"><CheckCircle2 size={20}/> My tasks</div>
-            <div className="badge" style={{ padding: '2px 8px', fontSize: 10, background: '#333', color: '#fff' }}>3</div>
+            <div className="badge" style={{ padding: '2px 8px', fontSize: 10, background: '#333', color: '#fff' }}>{allTasks.filter(t => t.assignedTo === (user.id||user._id)).length}</div>
           </button>
           <button className={`nav-btn ${view === 'members' ? 'active' : ''}`} onClick={() => { setView('members'); setProj(null); }}>
             <div className="flex gap12"><Users size={20}/> Members</div>
@@ -797,13 +776,13 @@ export default function App() {
       <main className="main">
         <div className="content">
           {proj ? (
-            <ProjectTasksView project={proj} user={user} onBack={() => setProj(null)} />
+            <ProjectTasksView project={proj} user={user} onBack={() => setProj(null)} onRefresh={() => refreshAll(user.id)} />
           ) : view === "dashboard" ? (
-            <Dashboard user={user} onNavigate={(v) => setView(v)} onNewTask={() => setShowProjectPicker(true)} />
+            <Dashboard user={user} data={dashboardData} onNavigate={(v) => setView(v)} onNewTask={() => setShowProjectPicker(true)} />
           ) : view === "projects" ? (
-            <ProjectsView user={user} onSelect={p => setProj(p)} />
+            <ProjectsView user={user} projects={projects} onSelect={p => setProj(p)} onRefresh={() => refreshAll(user.id)} />
           ) : view === "queue" ? (
-            <MyTasksView user={user} />
+            <MyTasksView user={user} tasks={allTasks} />
           ) : view === "members" ? (
             <div className="fade-in">
               <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>Members</h2>
