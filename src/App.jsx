@@ -70,12 +70,6 @@ function AuthScreen({ onAuth }) {
           <button className="btn btn-primary btn-full" onClick={submit} disabled={busy} style={{ padding: ".65rem", marginTop: 4 }}>
             {busy ? "Please wait…" : mode === "login" ? "Sign In →" : "Create Account →"}
           </button>
-          {mode === "login" && (
-            <div className="demo-hint">
-              <strong>Demo accounts · password: demo123</strong>
-              alice@demo.com · bob@demo.com · carol@demo.com · david@demo.com
-            </div>
-          )}
         </div>
       </div>
     </div>

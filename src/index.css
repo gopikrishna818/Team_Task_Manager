@@ -41,7 +41,7 @@ html, body {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "San Francisco", "Segoe UI", Roboto, "Helvetica Neue", sans-serif !important;
   background-color: var(--bg);
   color: var(--t1);
   font-size: 15px;
