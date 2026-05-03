@@ -60,7 +60,7 @@ function MetricCard({ title, value, trend, icon, color, onClick }) {
 // ── Auth Screen ──────────────────────────────────────────────────────────────
 function AuthScreen({ onAuth }) {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "alice@demo.com", password: "demo123" });
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
