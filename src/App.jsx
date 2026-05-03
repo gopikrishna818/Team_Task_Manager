@@ -4,7 +4,8 @@ import { Avatar, Modal, Field, Badge, ProgressBar, ErrorBox } from "./ui.jsx";
 import { 
   LayoutDashboard, Briefcase, CheckCircle2, Layers, Inbox, 
   ClipboardList, TrendingUp, Calendar, Zap, ShieldCheck, 
-  Lock, Globe, Users, Monitor, Columns, ArrowRight, Bell, Plus, Settings, AlertCircle, Clock, Trash2, UserPlus, ChevronRight
+  Lock, Globe, Users, Monitor, Columns, ArrowRight, Bell, Plus, Settings, AlertCircle, Clock, Trash2, UserPlus, ChevronRight,
+  User, Shield, CreditCard, Puzzle, LogOut, Moon, Sun, Search
 } from "lucide-react";
 
 const today = () => new Date().toISOString().split("T")[0];
@@ -207,7 +208,7 @@ function Dashboard({ user }) {
                     <span style={{ fontSize: 14, fontWeight: 600 }}>{s}</span>
                   </div>
                   <div style={{ width: 140, height: 4, background: '#f4f4f4', borderRadius: 2, position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', borderRadius: 2, background: ["#0ea5e9", "#f59e0b", "#10b981"][i], width: `${(d.byStatus[s] || 0) / d.totalTasks * 100}%` }} />
+                    <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', borderRadius: 2, background: ["#0ea5e9", "#f59e0b", "#10b981"][i], width: `${(d.byStatus[s] || 0) / (d.totalTasks || 1) * 100}%` }} />
                   </div>
                 </div>
               ))}
@@ -616,12 +617,100 @@ function MyTasksView({ user }) {
   );
 }
 
+// ── Settings ─────────────────────────────────────────────────────────────────
+function SettingsView({ user, activeTab }) {
+  const tabs = [
+    { id: 'profile', label: 'Profile', icon: <User size={18}/> },
+    { id: 'notifications', label: 'Notifications', icon: <Bell size={18}/> },
+    { id: 'security', label: 'Security', icon: <Shield size={18}/> },
+    { id: 'billing', label: 'Billing', icon: <CreditCard size={18}/> },
+    { id: 'integrations', label: 'Integrations', icon: <Puzzle size={18}/> },
+  ];
+  
+  const [currentTab, setCurrentTab] = useState(activeTab || 'profile');
+
+  return (
+    <div className="fade-in">
+      <div className="mb-32">
+        <h2 style={{ fontSize: 28, fontWeight: 800 }}>Settings</h2>
+        <p className="text-mute">Manage your personal and workspace configurations</p>
+      </div>
+
+      <div className="flex gap12 mb-32" style={{ overflowX: 'auto', paddingBottom: 8 }}>
+        {tabs.map(t => (
+          <button key={t.id} className={`btn ${currentTab === t.id ? 'btn-primary' : ''}`} onClick={() => setCurrentTab(t.id)}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="tasks-card">
+        {currentTab === 'profile' && (
+          <div className="entrance" style={{ maxWidth: 500 }}>
+            <h3 className="mb-20" style={{ fontWeight: 800 }}>Public Profile</h3>
+            <div className="flex gap20 mb-32" style={{ gap: 24 }}>
+              <Avatar user={user} size={80} />
+              <button className="btn">Change Photo</button>
+            </div>
+            <Field label="Full Name"><input className="input" defaultValue={user.name} /></Field>
+            <Field label="Email Address"><input className="input" defaultValue={user.email} disabled /></Field>
+            <Field label="Job Title"><input className="input" placeholder="e.g. Senior Designer" /></Field>
+            <button className="btn btn-primary mt-20">Save Changes</button>
+          </div>
+        )}
+        {currentTab === 'notifications' && (
+          <div className="entrance">
+            <h3 className="mb-20" style={{ fontWeight: 800 }}>Email Notifications</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {["New task assigned", "Deadline approaching", "Project comments", "Member mentions"].map(item => (
+                <div key={item} className="flex justify-between p-16" style={{ background: '#f8f9fa', borderRadius: 16 }}>
+                  <span style={{ fontWeight: 600 }}>{item}</span>
+                  <input type="checkbox" defaultChecked style={{ width: 20, height: 20, accentColor: '#000' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {currentTab === 'billing' && (
+          <div className="entrance">
+             <div className="flex justify-between mb-32" style={{ background: '#000', color: '#fff', padding: 32, borderRadius: 24 }}>
+               <div>
+                 <div style={{ fontSize: 13, fontWeight: 800, opacity: 0.6, textTransform: 'uppercase', marginBottom: 8 }}>Current Plan</div>
+                 <div style={{ fontSize: 32, fontWeight: 800 }}>Pro Team</div>
+               </div>
+               <div style={{ textAlign: 'right' }}>
+                 <div style={{ fontSize: 32, fontWeight: 800 }}>$24/mo</div>
+                 <div style={{ fontSize: 13, opacity: 0.6 }}>Next bill: Jun 12, 2026</div>
+               </div>
+             </div>
+             <h3 className="mb-20" style={{ fontWeight: 800 }}>Payment Methods</h3>
+             <div className="flex justify-between p-16" style={{ border: '1px solid #eee', borderRadius: 16 }}>
+               <div className="flex gap12">
+                 <div style={{ background: '#f4f4f4', padding: 8, borderRadius: 8 }}><CreditCard size={20}/></div>
+                 <div>
+                   <div style={{ fontWeight: 700 }}>Visa ending in 4242</div>
+                   <div style={{ fontSize: 12, color: '#999' }}>Expiry 12/28</div>
+                 </div>
+               </div>
+               <button className="btn">Edit</button>
+             </div>
+          </div>
+        )}
+        {currentTab !== 'profile' && currentTab !== 'notifications' && currentTab !== 'billing' && (
+          <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>This section is currently being updated. Check back soon!</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── App Shell ────────────────────────────────────────────────────────────────
 export default function App() {
   const [auth, setAuth] = useState(null);
   const [view, setView] = useState("dashboard");
   const [proj, setProj] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -672,9 +761,18 @@ export default function App() {
         </div>
 
         <div className="sb-section">
-          <div className="sb-label">Settings</div>
-          <button className={`nav-btn ${view === 'settings' ? 'active' : ''}`} onClick={() => { setView('settings'); setProj(null); }}>
-            <div className="flex gap12"><Settings size={20}/> Settings</div>
+          <div className="sb-label">Account</div>
+          <button className={`nav-btn ${view === 'profile' ? 'active' : ''}`} onClick={() => { setView('profile'); setProj(null); }}>
+            <div className="flex gap12"><User size={20}/> Profile</div>
+          </button>
+          <button className={`nav-btn ${view === 'notifications' ? 'active' : ''}`} onClick={() => { setView('notifications'); setProj(null); }}>
+            <div className="flex gap12"><Bell size={20}/> Notifications</div>
+          </button>
+          <button className={`nav-btn ${view === 'billing' ? 'active' : ''}`} onClick={() => { setView('billing'); setProj(null); }}>
+            <div className="flex gap12"><CreditCard size={20}/> Billing</div>
+          </button>
+          <button className={`nav-btn ${view === 'integrations' ? 'active' : ''}`} onClick={() => { setView('integrations'); setProj(null); }}>
+            <div className="flex gap12"><Puzzle size={20}/> Integrations</div>
           </button>
         </div>
 
@@ -686,7 +784,9 @@ export default function App() {
           </div>
           <div style={{ marginLeft: 'auto', width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />
         </div>
-        <button onClick={logout} style={{ margin: '0 16px 24px', background: 'rgba(255,255,255,0.05)', border: 'none', color: '#888', padding: '12px', borderRadius: '12px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Sign Out</button>
+        <button onClick={logout} style={{ margin: '0 16px 24px', background: 'rgba(255,255,255,0.05)', border: 'none', color: '#888', padding: '12px', borderRadius: '12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+          <LogOut size={16}/> Sign Out
+        </button>
       </aside>
       
       <main className="main">
@@ -705,11 +805,11 @@ export default function App() {
               <p className="text-mute mb-32">Manage your team and their permissions</p>
               <div className="tasks-card">Team management coming soon...</div>
             </div>
+          ) : ['profile', 'notifications', 'security', 'billing', 'integrations'].includes(view) ? (
+            <SettingsView user={user} activeTab={view} />
           ) : (
             <div className="fade-in">
-              <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>Settings</h2>
-              <p className="text-mute mb-32">Configure your account and workspace preferences</p>
-              <div className="tasks-card">Settings coming soon...</div>
+              <h2 style={{ fontSize: 28, fontWeight: 800 }}>Not Found</h2>
             </div>
           )}
         </div>
