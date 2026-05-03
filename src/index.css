@@ -101,10 +101,6 @@ body {
   display: flex; 
   min-height: 100vh; 
   width: 100%; 
-  background-attachment: fixed;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.03) 0, transparent 50%), 
-    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.03) 0, transparent 50%);
 }
 
 .sidebar {
@@ -368,6 +364,222 @@ body {
   100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
 }
 
+/* Split Auth Redesign */
+.split-auth {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.auth-left {
+  flex: 1.1;
+  background: #000000;
+  color: #ffffff;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Grid background for dark side */
+.auth-left::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+.auth-right {
+  flex: 0.9;
+  background: #ffffff;
+  padding: 60px 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.auth-nav {
+  position: absolute;
+  top: 40px;
+  right: 60px;
+  font-size: 14px;
+}
+
+.auth-content {
+  max-width: 440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.hero-text {
+  font-size: 72px;
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  margin-bottom: 24px;
+}
+
+.hero-text span {
+  display: block;
+}
+
+.hero-text .dim {
+  color: #555555;
+}
+
+.auth-sub {
+  font-size: 16px;
+  color: #888888;
+  line-height: 1.6;
+  margin-bottom: 48px;
+  max-width: 400px;
+}
+
+.auth-stats {
+  display: flex;
+  gap: 48px;
+  margin-bottom: 60px;
+}
+
+.stat-item .stat-val {
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.stat-item .stat-label {
+  font-size: 13px;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.feature-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.f-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.f-card:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  transform: translateX(10px);
+}
+
+.f-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.f-info .f-title { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.f-info .f-desc { font-size: 13px; color: #666666; }
+
+.auth-footer-links {
+  display: flex;
+  gap: 24px;
+  font-size: 13px;
+  color: #444444;
+}
+
+.auth-right-footer {
+  position: absolute;
+  bottom: 40px;
+  left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  font-size: 13px;
+  color: #999999;
+}
+
+.google-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #eeeeee;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  transition: all 0.2s;
+}
+
+.google-btn:hover {
+  background: #f9f9f9;
+  border-color: #dddddd;
+}
+
+.separator {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  color: #dddddd;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.separator::before, .separator::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #eeeeee;
+}
+
+.auth-input-dark {
+  background: #222222 !important;
+  border: 1px solid #333333 !important;
+  color: #ffffff !important;
+  height: 52px;
+  font-weight: 600;
+}
+
+.auth-input-dark::placeholder { color: #555555; }
+
+.auth-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  margin: 16px 0 32px;
+}
+
+.checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666666;
+  cursor: pointer;
+}
+
+.checkbox-wrap input {
+  accent-color: #000000;
+  width: 16px; height: 16px;
+}
+
+/* Custom Utilities */
 .flex { display: flex; align-items: center; }
 .flex-col { display: flex; flex-direction: column; }
 .justify-center { justify-content: center; }

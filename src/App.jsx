@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { api, parseToken, genToken, getUser } from "./data.js";
 import { Avatar, Modal, Field, Badge, ProgressBar, ErrorBox } from "./ui.jsx";
-import { LayoutDashboard, Briefcase, CheckCircle2, Layers, Inbox, ClipboardList, TrendingUp, Calendar, Zap } from "lucide-react";
+import { 
+  LayoutDashboard, Briefcase, CheckCircle2, Layers, Inbox, 
+  ClipboardList, TrendingUp, Calendar, Zap, ShieldCheck, 
+  Lock, Globe, Users, Monitor, Columns, ArrowRight
+} from "lucide-react";
 
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -59,44 +63,152 @@ function AuthScreen({ onAuth }) {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center fade-in" style={{ background: 'var(--bg)' }}>
-      <div className="auth-box entrance" style={{ maxWidth: 420, width: '90%' }}>
-        <div className="auth-logo text-center mb-20">
-          <div className="logo-icon mb-12" style={{ margin: '0 auto 16px', width: 64, height: 64 }}>
-            <Layers size={36} color="#fff" />
+    <div className="split-auth fade-in">
+      {/* Left Panel: Brand & Stats */}
+      <div className="auth-left">
+        <div>
+          <div className="flex gap12 mb-32" style={{ marginBottom: 48 }}>
+            <div className="logo-icon" style={{ borderRadius: 12, width: 44, height: 44, background: '#fff' }}>
+              <Layers size={26} color="#000" />
+            </div>
+            <span className="logo-text" style={{ color: '#fff', fontSize: 24 }}>TaskFlow</span>
           </div>
-          <h1 className="logo-text" style={{ fontSize: 40, fontWeight: 800, letterSpacing: '-0.04em' }}>Sign in to TaskFlow.</h1>
-          <p className="text-mute" style={{ fontSize: 16, marginTop: 8 }}>Use your enterprise account to continue.</p>
+
+          <div style={{ marginBottom: 40 }}>
+            <div className="badge" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 16px' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', marginRight: 10, display: 'inline-block' }} />
+              TEAM COLLABORATION PLATFORM
+            </div>
+          </div>
+
+          <h1 className="hero-text">
+            <span>Build, ship,</span>
+            <span className="dim">grow</span>
+            <span>together.</span>
+          </h1>
+
+          <p className="auth-sub">
+            TaskFlow brings your team's work into one place — projects, tasks, deadlines, and people. Stop chasing updates. Start shipping.
+          </p>
+
+          <div className="auth-stats">
+            <div className="stat-item">
+              <div className="stat-val">12K+</div>
+              <div className="stat-label">Active teams</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-val">98M</div>
+              <div className="stat-label">Tasks completed</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-val">99.9%</div>
+              <div className="stat-label">Uptime</div>
+            </div>
+          </div>
+
+          <div className="feature-cards">
+            <div className="f-card">
+              <div className="f-icon"><Columns size={20} color="#fff"/></div>
+              <div className="f-info">
+                <div className="f-title">Project boards</div>
+                <div className="f-desc">Kanban-style task tracking for every project</div>
+              </div>
+            </div>
+            <div className="f-card">
+              <div className="f-icon"><Users size={20} color="#fff"/></div>
+              <div className="f-info">
+                <div className="f-title">Role-based access</div>
+                <div className="f-desc">Admins manage, members focus and execute</div>
+              </div>
+            </div>
+            <div className="f-card">
+              <div className="f-icon"><TrendingUp size={20} color="#fff"/></div>
+              <div className="f-info">
+                <div className="f-title">Real-time dashboard</div>
+                <div className="f-desc">Live stats on tasks, progress and overdue items</div>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        <div className="card glass p-32">
-          <div className="tab-group flex mb-20" style={{ background: 'var(--accent-bg)', padding: 4, borderRadius: 'var(--r-md)' }}>
-            {["login", "signup"].map((m) => (
-              <button key={m} className={`nav-btn flex-1 ${mode === m ? "active" : ""}`} onClick={() => setMode(m)} style={{ flex: 1, justifyContent: 'center' }}>
-                {m === "login" ? "Sign In" : "Sign Up"}
-              </button>
-            ))}
-          </div>
-          
-          <ErrorBox msg={err} />
-          
-          {mode === "signup" && (
-            <Field label="Full Name">
-              <input className="input" placeholder="Jane Smith" value={form.name} onChange={set("name")} />
-            </Field>
-          )}
-          <Field label="Email">
-            <input className="input" type="email" value={form.email} onChange={set("email")} />
-          </Field>
-          <Field label="Password">
-            <input className="input" type="password" value={form.password} onChange={set("password")} onKeyDown={(e) => e.key === "Enter" && submit()} />
-          </Field>
-          
-          <button className="btn btn-primary btn-full w-full mt-12" onClick={submit} disabled={busy} style={{ width: '100%', padding: 14 }}>
-            {busy ? "Authenticating..." : mode === "login" ? "Sign In →" : "Join TaskFlow →"}
+
+        <div className="auth-footer-links">
+          <div className="flex gap8"><Lock size={14}/> 256-bit encryption</div>
+          <div className="flex gap8"><ShieldCheck size={14}/> SOC 2 compliant</div>
+          <div className="flex gap8"><Globe size={14}/> 99.9% uptime SLA</div>
+        </div>
+      </div>
+
+      {/* Right Panel: Login Form */}
+      <div className="auth-right">
+        <div className="auth-nav">
+          <span style={{ color: '#666' }}>No account yet? </span>
+          <button style={{ background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer', padding: 0 }} onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}>
+            {mode === 'login' ? 'Create one free →' : 'Back to login ←'}
           </button>
         </div>
-        
+
+        <div className="auth-content entrance">
+          <h2 style={{ fontSize: 44, fontWeight: 800, marginBottom: 8, letterSpacing: '-0.04em' }}>
+            {mode === 'login' ? 'Welcome back' : 'Join TaskFlow'}
+          </h2>
+          <p style={{ color: '#999', fontSize: 18, marginBottom: 40 }}>
+            {mode === 'login' ? 'Sign in to your TaskFlow workspace' : 'Start collaborating with your team today'}
+          </p>
+
+          <button className="google-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div className="separator">or sign in with email</div>
+
+          <ErrorBox msg={err} />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {mode === "signup" && (
+              <div className="field">
+                <label style={{ fontSize: 13, fontWeight: 700, color: '#444', textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>FULL NAME</label>
+                <input className="input auth-input-dark" placeholder="Jane Smith" value={form.name} onChange={set("name")} />
+              </div>
+            )}
+            <div className="field">
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#444', textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>EMAIL</label>
+              <input className="input auth-input-dark" type="email" placeholder="alice@demo.com" value={form.email} onChange={set("email")} />
+            </div>
+            <div className="field">
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#444', textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>PASSWORD</label>
+              <input className="input auth-input-dark" type="password" placeholder="••••••••••••" value={form.password} onChange={set("password")} onKeyDown={(e) => e.key === "Enter" && submit()} />
+            </div>
+          </div>
+
+          <div className="auth-actions">
+            <label className="checkbox-wrap">
+              <input type="checkbox" defaultChecked />
+              <span>Keep me signed in</span>
+            </label>
+            <button style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>Forgot password?</button>
+          </div>
+
+          <button className="btn btn-primary btn-full w-full" onClick={submit} disabled={busy} style={{ width: '100%', padding: 18, borderRadius: 12, background: mode === 'login' ? '#fff' : '#000', color: mode === 'login' ? '#000' : '#fff', border: '1px solid #eee', fontSize: 16, fontWeight: 800 }}>
+            {busy ? "Please wait..." : mode === 'login' ? "Sign in" : "Create Account"}
+          </button>
+
+          <p style={{ textAlign: 'center', color: '#999', fontSize: 13, marginTop: 32, lineHeight: 1.6 }}>
+            By signing in you agree to our <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>Terms of Service</span> and <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>Privacy Policy</span>
+          </p>
+        </div>
+
+        <div className="auth-right-footer">
+          <span>Help</span>
+          <span>Privacy</span>
+          <span>Terms</span>
+          <span>Status</span>
+        </div>
       </div>
     </div>
   );
