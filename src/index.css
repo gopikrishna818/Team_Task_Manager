@@ -216,22 +216,55 @@ button:disabled {
 }
 
 /* Bento Grid */
-.bento { display: grid; gap: 24px; }
-.bento-5col { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-.bento-3col { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.bento { display: grid; gap: 20px; }
+.bento-5col { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.bento-3col { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .bento-2col { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
 
-/* Metrics */
+/* Metrics — colorful bento cards */
 .metric {
-  background: #ffffff;
   border-radius: var(--r2);
-  padding: 1.5rem;
-  display: flex; flex-direction: column; gap: 4px;
-  box-shadow: var(--sh);
-  border: 1px solid rgba(0,0,0,0.02);
+  padding: 1.5rem 1.5rem 1.25rem;
+  display: flex; flex-direction: column; gap: 6px;
+  position: relative; overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  border: none;
+  min-height: 160px;
 }
-.metric-label { font-size: 12px; font-weight: 600; color: var(--t2); text-transform: uppercase; letter-spacing: 0.05em; }
-.metric-value { font-size: 36px; font-weight: 700; color: var(--t1); letter-spacing: -0.02em; }
+.metric:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+}
+/* card colour variants */
+.metric-1 { background: #1a1a2e; color: #fff; }
+.metric-2 { background: #0f4c75; color: #fff; }
+.metric-3 { background: #16213e; color: #fff; }
+.metric-4 { background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); color: #fff; }
+.metric-5 { background: linear-gradient(135deg, #276749 0%, #2f855a 100%); color: #fff; }
+
+.metric-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; opacity: 0.65;
+  color: inherit;
+}
+.metric-value {
+  font-size: 48px; font-weight: 800; line-height: 1;
+  letter-spacing: -0.03em;
+  color: inherit;
+  margin-top: 4px;
+}
+.metric-icon {
+  position: absolute; right: -8px; bottom: -8px;
+  opacity: 0.12;
+  color: inherit;
+  transition: transform 0.3s ease;
+}
+.metric:hover .metric-icon { transform: scale(1.12) rotate(-5deg); }
+.metric-bar {
+  height: 4px; border-radius: 2px; margin-top: 16px;
+  background: rgba(255,255,255,0.2); overflow: hidden;
+}
+.metric-bar-fill { height: 100%; border-radius: 2px; background: rgba(255,255,255,0.7); transition: width 1s ease; }
 
 /* Buttons */
 .btn {

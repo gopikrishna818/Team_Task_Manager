@@ -99,11 +99,11 @@ function Dashboard({ user }) {
 
   const statusColors = { "To Do": "#a0a0b5", "In Progress": "#2563eb", Done: "#16a34a" };
   const metrics = [
-    { label: "My Projects", value: d.projects, icon: <Briefcase size={80} strokeWidth={1} />, cls: "metric-accent", bar: 100, barColor: "var(--accent)" },
-    { label: "Total Tasks", value: d.totalTasks, icon: <Layers size={80} strokeWidth={1} />, cls: "", bar: 100, barColor: "#6b6b80" },
-    { label: "My Tasks", value: d.myTasks, icon: <CheckCircle2 size={80} strokeWidth={1} />, cls: "metric-blue", bar: d.totalTasks ? Math.round((d.myTasks / d.totalTasks) * 100) : 0, barColor: "var(--blue)" },
-    { label: "Overdue", value: d.overdue, icon: <LayoutDashboard size={80} strokeWidth={1} />, cls: "metric-red", bar: d.totalTasks ? Math.round((d.overdue / d.totalTasks) * 100) : 0, barColor: "var(--red)" },
-    { label: "Completed", value: d.byStatus["Done"], icon: <CheckCircle2 size={80} strokeWidth={1} />, cls: "metric-green", bar: d.totalTasks ? Math.round((d.byStatus["Done"] / d.totalTasks) * 100) : 0, barColor: "var(--green)" },
+    { label: "My Projects", value: d.projects, icon: <Briefcase size={80} strokeWidth={1} />, cls: "metric-1", bar: 100 },
+    { label: "Total Tasks", value: d.totalTasks, icon: <Layers size={80} strokeWidth={1} />, cls: "metric-2", bar: 100 },
+    { label: "My Tasks", value: d.myTasks, icon: <CheckCircle2 size={80} strokeWidth={1} />, cls: "metric-3", bar: d.totalTasks ? Math.round((d.myTasks / d.totalTasks) * 100) : 0 },
+    { label: "Overdue", value: d.overdue, icon: <LayoutDashboard size={80} strokeWidth={1} />, cls: "metric-4", bar: d.totalTasks ? Math.round((d.overdue / d.totalTasks) * 100) : 0 },
+    { label: "Completed", value: d.byStatus["Done"], icon: <CheckCircle2 size={80} strokeWidth={1} />, cls: "metric-5", bar: d.totalTasks ? Math.round((d.byStatus["Done"] / d.totalTasks) * 100) : 0 },
   ];
 
   return (
@@ -121,7 +121,7 @@ function Dashboard({ user }) {
             <div className="metric-label">{m.label}</div>
             <div className="metric-value">{m.value}</div>
             <div className="metric-bar">
-              <div className="metric-bar-fill" style={{ width: `${m.bar}%`, background: m.barColor }} />
+              <div className="metric-bar-fill" style={{ width: `${m.bar}%` }} />
             </div>
           </div>
         ))}
