@@ -115,8 +115,8 @@ function AuthScreen({ onAuth }) {
           <ErrorBox msg={err} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {mode === "signup" && <input className="auth-input-dark" placeholder="Full Name" value={form.name} onChange={set("name")} />}
-            <input className="auth-input-dark" type="email" placeholder="Email Address" value={form.email} onChange={set("email")} />
-            <input className="auth-input-dark" type="password" placeholder="Password" value={form.password} onChange={set("password")} onKeyDown={(e) => e.key === "Enter" && submit()} />
+            <input className="auth-input-dark" type="email" placeholder="Email Address" value={form.email} onChange={set("email")} autoComplete="off" />
+            <input className="auth-input-dark" type="password" placeholder="Password" value={form.password} onChange={set("password")} onKeyDown={(e) => e.key === "Enter" && submit()} autoComplete="off" />
           </div>
           <button className="btn btn-primary w-full mt-20" onClick={submit} disabled={busy}>{busy ? "Loading..." : "Sign in"}</button>
           <p style={{ textAlign: 'center', color: '#999', fontSize: 13, marginTop: 32 }}>By signing in, you agree to our Terms and Privacy Policy</p>
