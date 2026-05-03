@@ -13,14 +13,14 @@ const today = () => new Date().toISOString().split("T")[0];
 
 function DonutChart({ data, total }) {
   const colors = ["#0ea5e9", "#f59e0b", "#10b981"]; // Blue, Amber, Green
-  const entries = Object.entries(data);
+  const entries = [["To Do", data["To Do"] || 0], ["In Progress", data["In Progress"] || 0], ["Done", data["Done"] || 0]];
   let cumulativePercent = 0;
 
   return (
     <div className="donut-wrap">
       <svg viewBox="0 0 100 100" className="donut-svg" width="100%" height="100%">
         {entries.map(([label, value], i) => {
-          const percent = (value / total) * 100;
+          const percent = total > 0 ? (value / total) * 100 : 0;
           const strokeDasharray = `${percent} ${100 - percent}`;
           const strokeDashoffset = -cumulativePercent;
           cumulativePercent += percent;
@@ -119,7 +119,7 @@ function AuthScreen({ onAuth }) {
             <input className="auth-input-dark" type="email" placeholder="Email Address" value={form.email} onChange={set("email")} />
             <input className="auth-input-dark" type="password" placeholder="Password" value={form.password} onChange={set("password")} onKeyDown={(e) => e.key === "Enter" && submit()} />
           </div>
-          <button className="btn-primary w-full mt-20" onClick={submit} disabled={busy}>{busy ? "Loading..." : "Sign in"}</button>
+          <button className="btn btn-primary w-full mt-20" onClick={submit} disabled={busy}>{busy ? "Loading..." : "Sign in"}</button>
           <p style={{ textAlign: 'center', color: '#999', fontSize: 13, marginTop: 32 }}>By signing in, you agree to our Terms and Privacy Policy</p>
         </div>
       </div>
@@ -154,7 +154,7 @@ function Dashboard({ user }) {
           </div>
           <div className="flex gap12">
             <button className="btn"><Bell size={18}/></button>
-            <button className="btn btn-primary" style={{ background: '#f4f4f4', color: '#000', border: 'none' }}><Plus size={18}/> New task</button>
+            <button className="btn btn-primary"><Plus size={18}/> New task</button>
             <Avatar user={user} size={40} />
           </div>
         </div>
@@ -242,7 +242,7 @@ function Dashboard({ user }) {
                     </td>
                     <td><Avatar user={{ name: t.assignedToName }} size={28} /></td>
                     <td><Badge type={t.priority} /></td>
-                    <td><span style={{ fontSize: 13, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: t.status === 'Done' ? '#10b98115' : '#f4f4f4', color: t.status === 'Done' ? '#10b981' : '#666' }}>{t.status}</span></td>
+                    <td><Badge type={t.status} /></td>
                     <td><span style={{ fontSize: 13, color: '#999', fontWeight: 600 }}>{t.dueDate?.split("-").slice(1).join(" ")}</span></td>
                   </tr>
                 ))}
@@ -314,9 +314,9 @@ function TaskModal({ task, projectId, user, members, onSave, onClose }) {
           <input className="input" value={form.title} onChange={set("title")} disabled={!isAdmin} placeholder="What needs to be done?" />
         </Field>
         <Field label="Detailed Brief">
-          <textarea className="input" style={{ minHeight: 100, resize: "vertical" }} value={form.description} onChange={set("description")} disabled={!isAdmin} placeholder="Add more context here..." />
+          <textarea className="input" style={{ minHeight: 120, resize: "vertical" }} value={form.description} onChange={set("description")} disabled={!isAdmin} placeholder="Add more context here..." />
         </Field>
-        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="grid-2">
           <Field label="Status">
             <select className="input" value={form.status} onChange={set("status")}>
               {["To Do", "In Progress", "Done"].map((s) => (
@@ -332,7 +332,7 @@ function TaskModal({ task, projectId, user, members, onSave, onClose }) {
             </select>
           </Field>
         </div>
-        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="grid-2">
           <Field label="Assign To Member">
             <select className="input" value={form.assignedTo} onChange={set("assignedTo")} disabled={!isAdmin}>
               {members?.map((m) => (
@@ -346,7 +346,7 @@ function TaskModal({ task, projectId, user, members, onSave, onClose }) {
             <input className="input" type="date" value={form.dueDate} onChange={set("dueDate")} disabled={!isAdmin} />
           </Field>
         </div>
-        <div className="flex gap12 mt-20" style={{ justifyContent: "flex-end", marginTop: 24 }}>
+        <div className="flex gap12 mt-20" style={{ justifyContent: "flex-end" }}>
           <button className="btn" onClick={onClose}>Discard</button>
           <button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? "Processing..." : "Commit Changes"}</button>
         </div>
@@ -380,9 +380,7 @@ function ProjectTasksView({ project, user, onBack }) {
     }
   }, [user.id, project.id]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   const cols = ["To Do", "In Progress", "Done"];
   const colColors = { "To Do": "var(--t3)", "In Progress": "var(--blue)", Done: "var(--green)" };
@@ -398,23 +396,13 @@ function ProjectTasksView({ project, user, onBack }) {
     }
   };
 
-  const deleteTask = async (taskId) => {
-    if (!confirm("Delete this task?")) return;
-    try {
-      await api.deleteTask(user.id, project.id, taskId);
-      refresh();
-    } catch (err) {
-      console.error("Failed to delete task:", err);
-    }
-  };
-
   if (loading) return <div style={{ padding: 48 }}>Syncing tasks...</div>;
 
   return (
     <div className="fade-in">
       <div className="flex justify-between mb-32">
         <div className="flex gap12">
-          <button className="btn" onClick={onBack}><ArrowRight style={{ transform: 'rotate(180deg)' }} size={18} /></button>
+          <button className="btn" onClick={onBack} style={{ width: 44, height: 44, padding: 0 }}><ArrowRight style={{ transform: 'rotate(180deg)' }} size={18} /></button>
           <div>
             <h2 style={{ fontSize: 24, fontWeight: 800 }}>{project.name}</h2>
             <p className="text-mute">{project.description}</p>
@@ -428,22 +416,22 @@ function ProjectTasksView({ project, user, onBack }) {
 
       <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         {cols.map((col, idx) => (
-          <div key={col} className="tasks-card" style={{ background: '#fcfcfc' }}>
+          <div key={col} className="tasks-card" style={{ background: '#fcfcfc', border: '1px solid #eee' }}>
             <div className="flex justify-between mb-20" style={{ borderBottom: `2px solid ${colColors[col]}`, paddingBottom: 12 }}>
-              <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: 13, letterSpacing: '0.05em' }}>{col}</span>
+              <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: 12, letterSpacing: '0.05em' }}>{col}</span>
               <span className="badge" style={{ background: '#eee', color: '#666' }}>{filtered.filter(t => t.status === col).length}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {filtered.filter(t => t.status === col).map(t => (
-                <div key={t.id} className="metric-card" style={{ padding: 16, cursor: 'pointer' }} onClick={() => { setEditing(t); setShowNew(true); }}>
-                  <div className="flex justify-between mb-8">
+                <div key={t.id} className="metric-card" style={{ padding: 20, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }} onClick={() => { setEditing(t); setShowNew(true); }}>
+                  <div className="flex justify-between mb-12">
                     <Badge type={t.priority} />
-                    {t.dueDate < today() && t.status !== "Done" && <span style={{ color: 'var(--red)', fontSize: 11, fontWeight: 700 }}>⚠ OVERDUE</span>}
+                    {t.dueDate < today() && t.status !== "Done" && <span style={{ color: 'var(--red)', fontSize: 10, fontWeight: 800 }}>⚠ OVERDUE</span>}
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>{t.title}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>{t.title}</div>
                   <div className="flex justify-between">
                     <Avatar user={{ name: t.assignedToName }} size={24} />
-                    <span style={{ fontSize: 11, color: '#999', fontWeight: 700 }}>{t.dueDate}</span>
+                    <span style={{ fontSize: 11, color: '#999', fontWeight: 800 }}>{t.dueDate}</span>
                   </div>
                 </div>
               ))}
@@ -456,9 +444,9 @@ function ProjectTasksView({ project, user, onBack }) {
       
       {showMembers && isAdmin && (
         <Modal title="Project Access" onClose={() => setShowMembers(false)}>
-           <div style={{ marginBottom: 24 }}>
+           <div style={{ marginBottom: 32 }}>
              {project.members?.map(m => (
-               <div key={m.userId} className="flex justify-between p-12 mb-8" style={{ background: '#f9f9f9', borderRadius: 12 }}>
+               <div key={m.userId} className="flex justify-between p-16 mb-8" style={{ background: '#f8f9fa', borderRadius: 16 }}>
                  <div className="flex gap12">
                    <Avatar user={{ name: m.userName, email: m.userEmail }} size={32} />
                    <div>
@@ -466,15 +454,15 @@ function ProjectTasksView({ project, user, onBack }) {
                      <div style={{ fontSize: 12, color: '#999' }}>{m.role}</div>
                    </div>
                  </div>
-                 {m.userId !== user.id && <button className="btn" style={{ padding: '4px 8px', fontSize: 11 }} onClick={() => api.removeMember(user.id, project.id, m.userId)}>Remove</button>}
+                 {m.userId !== user.id && <button className="btn" style={{ padding: '6px 12px', fontSize: 11 }} onClick={() => api.removeMember(user.id, project.id, m.userId)}>Remove</button>}
                </div>
              ))}
            </div>
-           <div className="tasks-card" style={{ background: '#f4f4f4' }}>
+           <div className="tasks-card" style={{ background: '#f4f4f4', padding: 24, borderRadius: 16 }}>
              <Field label="Invite teammate">
                <div className="flex gap8">
-                 <input className="input" placeholder="email@company.com" value={memEmail} onChange={(e) => setMemEmail(e.target.value)} />
-                 <button className="btn btn-primary" onClick={addMem}>Invite</button>
+                 <input className="input" style={{ flex: 1 }} placeholder="email@company.com" value={memEmail} onChange={(e) => setMemEmail(e.target.value)} />
+                 <button className="btn btn-primary" style={{ padding: '12px 24px' }} onClick={addMem}>Invite</button>
                </div>
              </Field>
              <ErrorBox msg={memErr} />
@@ -616,7 +604,7 @@ function MyTasksView({ user }) {
                 <td><div className="task-name">{t.title}</div></td>
                 <td className="text-mute" style={{ fontSize: 14 }}>{t.projectName}</td>
                 <td><Badge type={t.priority} /></td>
-                <td><span style={{ fontSize: 13, fontWeight: 700, color: t.status === 'Done' ? '#10b981' : '#666' }}>{t.status}</span></td>
+                <td><Badge type={t.status} /></td>
                 <td><span style={{ fontSize: 13, color: '#999', fontWeight: 600 }}>{t.dueDate}</span></td>
               </tr>
             ))}
