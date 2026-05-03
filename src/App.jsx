@@ -42,9 +42,9 @@ function DonutChart({ data, total }) {
   );
 }
 
-function MetricCard({ title, value, trend, icon, color }) {
+function MetricCard({ title, value, trend, icon, color, onClick }) {
   return (
-    <div className="metric-card">
+    <div className="metric-card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       <div className="m-header">
         <div className="m-title">{title}</div>
         <div className="m-icon" style={{ background: `${color}15`, color }}>{icon}</div>
@@ -129,7 +129,7 @@ function AuthScreen({ onAuth }) {
 }
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
-function Dashboard({ user }) {
+function Dashboard({ user, onNavigate, onNewTask }) {
   const [d, setD] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -155,7 +155,7 @@ function Dashboard({ user }) {
           </div>
           <div className="flex gap12">
             <button className="btn"><Bell size={18}/></button>
-            <button className="btn btn-primary"><Plus size={18}/> New task</button>
+            <button className="btn btn-primary" onClick={onNewTask}><Plus size={18}/> New task</button>
             <Avatar user={user} size={40} />
           </div>
         </div>
@@ -163,10 +163,10 @@ function Dashboard({ user }) {
 
       <div className="content">
         <div className="metric-grid">
-          <MetricCard title="My Projects" value={d.projects} trend="this month" icon={<Briefcase size={18}/>} color="#0ea5e9" />
-          <MetricCard title="Total Tasks" value={d.totalTasks} trend="since last week" icon={<Zap size={18}/>} color="#8b5cf6" />
-          <MetricCard title="In Progress" value={d.byStatus["In Progress"] || 0} trend="Active right now" icon={<Clock size={18}/>} color="#f59e0b" />
-          <MetricCard title="Completed" value={d.byStatus["Done"] || 0} trend="completion rate" icon={<CheckCircle2 size={18}/>} color="#10b981" />
+          <MetricCard title="My Projects" value={d.projects} trend="this month" icon={<Briefcase size={18}/>} color="#0ea5e9" onClick={() => onNavigate('projects')} />
+          <MetricCard title="Total Tasks" value={d.totalTasks} trend="since last week" icon={<Zap size={18}/>} color="#8b5cf6" onClick={() => onNavigate('queue')} />
+          <MetricCard title="In Progress" value={d.byStatus["In Progress"] || 0} trend="Active right now" icon={<Clock size={18}/>} color="#f59e0b" onClick={() => onNavigate('queue')} />
+          <MetricCard title="Completed" value={d.byStatus["Done"] || 0} trend="completion rate" icon={<CheckCircle2 size={18}/>} color="#10b981" onClick={() => onNavigate('queue')} />
         </div>
 
         <div className="charts-grid">
@@ -220,7 +220,7 @@ function Dashboard({ user }) {
           <div className="tasks-card">
             <div className="flex justify-between mb-20" style={{ marginBottom: 24 }}>
               <h2 className="chart-title">Recent tasks</h2>
-              <button className="btn" style={{ border: 'none', color: '#999', fontSize: 13, fontWeight: 700 }}>View all</button>
+              <button className="btn" style={{ border: 'none', color: '#999', fontSize: 13, fontWeight: 700 }} onClick={() => onNavigate('queue')}>View all</button>
             </div>
             <table className="tbl">
               <thead>
@@ -234,7 +234,7 @@ function Dashboard({ user }) {
               </thead>
               <tbody>
                 {d.recentTasks.map(t => (
-                  <tr key={t.id}>
+                  <tr key={t.id} onClick={() => onNavigate('projects')} style={{ cursor: 'pointer' }}>
                     <td>
                       <div className="task-cell">
                         <span className="task-name">{t.title}</span>
@@ -255,7 +255,7 @@ function Dashboard({ user }) {
             <h2 className="chart-title mb-20" style={{ marginBottom: 24 }}>Team members</h2>
             <div className="team-list">
               {d.byUser.slice(0, 4).map(({ user: u, count }) => (
-                <div key={u.id} className="member-item">
+                <div key={u.id} className="member-item" onClick={() => onNavigate('members')} style={{ cursor: 'pointer' }}>
                   <Avatar user={u} size={36} />
                   <div className="member-info">
                     <span className="m-name">{u.name}</span>
@@ -265,7 +265,7 @@ function Dashboard({ user }) {
               ))}
             </div>
             <div style={{ marginTop: 'auto', paddingTop: 32 }}>
-              <div className="alert-box">
+              <div className="alert-box" onClick={() => onNavigate('queue')} style={{ cursor: 'pointer' }}>
                 <AlertCircle size={18} />
                 <span>{d.overdue} task{d.overdue !== 1 ? 's are' : ' is'} past its due</span>
               </div>
@@ -710,7 +710,8 @@ export default function App() {
   const [view, setView] = useState("dashboard");
   const [proj, setProj] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [projects, setProjects] = useState([]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -718,7 +719,11 @@ export default function App() {
       if (token) {
         try {
           const user = await getUser();
-          if (user) setAuth({ token, user });
+          if (user) {
+            setAuth({ token, user });
+            const pData = await api.getProjects(user.id);
+            setProjects(pData);
+          }
         } catch (err) { localStorage.removeItem("taskflow_token"); }
       }
       setLoading(false);
@@ -749,7 +754,7 @@ export default function App() {
           </button>
           <button className={`nav-btn ${view === 'projects' || proj ? 'active' : ''}`} onClick={() => { setView('projects'); setProj(null); }}>
             <div className="flex gap12"><Briefcase size={20}/> Projects</div>
-            <div className="badge" style={{ padding: '2px 8px', fontSize: 10, background: '#333', color: '#fff' }}>2</div>
+            <div className="badge" style={{ padding: '2px 8px', fontSize: 10, background: '#333', color: '#fff' }}>{projects.length}</div>
           </button>
           <button className={`nav-btn ${view === 'queue' ? 'active' : ''}`} onClick={() => { setView('queue'); setProj(null); }}>
             <div className="flex gap12"><CheckCircle2 size={20}/> My tasks</div>
@@ -794,7 +799,7 @@ export default function App() {
           {proj ? (
             <ProjectTasksView project={proj} user={user} onBack={() => setProj(null)} />
           ) : view === "dashboard" ? (
-            <Dashboard user={user} />
+            <Dashboard user={user} onNavigate={(v) => setView(v)} onNewTask={() => setShowProjectPicker(true)} />
           ) : view === "projects" ? (
             <ProjectsView user={user} onSelect={p => setProj(p)} />
           ) : view === "queue" ? (
@@ -814,6 +819,23 @@ export default function App() {
           )}
         </div>
       </main>
+
+      {showProjectPicker && (
+        <Modal title="Select Workspace" onClose={() => setShowProjectPicker(false)}>
+          <div className="entrance">
+            <p className="text-mute mb-20">Choose a workspace to add your new task to:</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {projects.map(p => (
+                <button key={p.id} className="btn w-full" style={{ justifyContent: 'space-between', padding: '16px 20px' }} onClick={() => { setProj(p); setShowProjectPicker(false); }}>
+                  <div className="flex gap12"><Briefcase size={18}/> {p.name}</div>
+                  <ChevronRight size={16} />
+                </button>
+              ))}
+              {projects.length === 0 && <div className="text-center p-20 text-mute">No workspaces available. Create one first!</div>}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
